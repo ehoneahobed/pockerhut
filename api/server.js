@@ -4,6 +4,9 @@ require('dotenv').config();
 const cors = require('cors');
 const app = express();
 
+// import routers
+const userRoute = require('./routes/user');
+
 
 // connecting to database
 mongoose.set('strictQuery', true);
@@ -19,3 +22,5 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 // add all necessary middlewares
 app.use(cors());
 app.use(express.json()); // middleware that allows the sending and receiving of json data
+
+app.use('/api/user', userRoute);

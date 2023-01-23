@@ -18,28 +18,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    role: {
-        type: String,
-        required: true,
-        enum: ['admin', 'vendor', 'customer']
+    
+    billing: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Billing',
     },
-    shipping: {
-        address: {
-            type: String,
-            default: null
-        },
-        city: {
-            type: String,
-            default: null
-        },
-        state: {
-            type: String,
-            default: null
-        },
-        contact: {
-            type: String,
-            default: null
-        }
+    isAdmin: {
+        type: Boolean,
+        default: false,
     },
     
 }, {timestamps: true});
