@@ -6,7 +6,8 @@ const billingSchema = new mongoose.Schema({
     },
     address_1: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
     },
     address_2: {
         type: String
@@ -20,6 +21,10 @@ const billingSchema = new mongoose.Schema({
     },
     town: {
         type: String
+    },
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     }
     
 }, {timestamps: true});

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { verifyTokenAndAdmin, verifyTokenAndAuthorization } = require('../controllers/verifyToken');
+const { verifyTokenAndAdmin, verifyTokenAndAuthorization, verifyToken } = require('../controllers/verifyToken');
 
 // import controllers
 const authController = require('../controllers/auth');
@@ -22,5 +22,8 @@ router.get('/:id', verifyTokenAndAuthorization, userController.getUser);
 
 // get all users (only admins can)
 router.get('/', verifyTokenAndAdmin, userController.getUsers);
+
+// add billing information
+router.post('/billing', verifyToken, userController.createBilling);
 
 module.exports = router;
