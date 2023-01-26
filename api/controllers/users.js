@@ -85,3 +85,64 @@ exports.createBilling = async (req, res) => {
         res.status(500).json(error);
     }
 }
+
+
+// get user billing info
+exports.getUserBilling = async (req, res) => {
+    try {
+        const billing = await User.findOne({ _id: req.params.id }).populate('billing_id');
+        const {password, ...others} = billing.toObject();
+        res.status(200).json(others);
+    } catch (error) {
+        res.status(500).json(error);
+    }
+}
+
+// update user billing info
+exports.updateBilling = async (req, res) => {
+    try {
+        const billingId = req.params.id;
+
+        // Find and update the billing document
+        const updatedBilling = await Billing.findByIdAndUpdate(billingId, req.body, {new: true});
+
+        // Send the updated billing information as a response
+        res.status(200).json(updatedBilling);
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
+
+
+// delete user billing information
+exports.deleteBilling = async (req, res) => {
+    try {
+        const billingId = req.params.id;
+
+        // Find and delete the billing document
+        await Billing.findByIdAndDelete(billingId);
+
+        res.status(200).json({ message: "Billing document deleted successfully" });
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
+
+
+// get all users with their respective billing info
+exports.getUsersWithBilling = async (req, res) => {
+    try {
+        // const users = await User.find();
+        const users = await User.find().populate("billing_id");
+
+        // sanitize users and remove their passwords
+        const sanitizedUsers = users.map(user => {
+            const { password, ...others } = user._doc;
+            return others;
+        })
+
+        res.status(200).json(sanitizedUsers);
+    } catch (error) {
+        res.status(500).json(error);
+    }
+}

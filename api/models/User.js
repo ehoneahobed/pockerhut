@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
         required: true
     },
     
-    billing: {
+    billing_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Billing',
     },

@@ -26,4 +26,10 @@ router.get('/', verifyTokenAndAdmin, userController.getUsers);
 // add billing information
 router.post('/billing', verifyToken, userController.createBilling);
 
+// get user billing information
+router.get('/billing/:id', verifyTokenAndAuthorization, userController.getUserBilling);
+
+// get all users with their respective billing information
+router.get('/billing', verifyTokenAndAdmin, userController.getUsersWithBilling);
+
 module.exports = router;
