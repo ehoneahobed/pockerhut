@@ -26,3 +26,12 @@ router.get('/', blogController.getBlogs);
 
 // get all blog posts with comments
 router.get('/comments', blogController.getBlogsWithComments);
+
+// create a new comment
+router.post('/comment/:id', CommentController.createComment);
+
+// update a comment
+router.patch('/comment/:id', CommentController.updateComment);
+
+// delete a comment
+router.delete('/comment/:id', CommentController.deleteComment);

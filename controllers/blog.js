@@ -121,3 +121,43 @@ exports.getBlogsWithComments = async (req, res) => {
     }
 };
 
+// create a new comment
+exports.createComment = async (req, res) => {
+    try {
+    // Create a new comment
+    const comment = new Comment({
+    content: req.body.content,
+    author: req.user.id,
+    blog: req.params.id
+    });    
+    // Save the comment to the database
+    const savedComment = await comment.save();
+
+    res.status(201).json(savedComment);
+} catch (error) {
+    res.status(500).json(error);
+}};
+
+// update a comment
+exports.updateComment = async (req, res) => {
+try {
+const commentId = req.params.id;
+    // Find the comment and update it
+    const updatedComment = await Comment.findByIdAndUpdate(commentId, req.body, { new: true });
+
+    res.status(200).json(updatedComment);
+} catch (error) {
+    res.status(500).json(error);
+}};
+
+// delete a comment
+exports.deleteComment = async (req, res) => {
+try {
+const commentId = req.params.id;
+    // Find and delete the comment
+    await Comment.findByIdAndDelete(commentId);
+
+    res.status(200).json({ message: "Comment deleted successfully" });
+} catch (error) {
+    res.status(500).json(error);
+}};
