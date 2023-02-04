@@ -7,7 +7,7 @@ exports.createBlog = async (req, res) => {
         const blog = new Blog({
             title: req.body.title,
             content: req.body.content,
-            featuredImage: req.body.filename,
+            featuredImage: req.file.filename,
             author: req.user.id
         });
 

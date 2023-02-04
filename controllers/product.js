@@ -1,6 +1,6 @@
 const Product = require('../models/Product')
 const Category = require('../models/Categories');
-const Review = require("path/to/review/model");
+// const Review = require("../models/");
 
 // Creating a product
 exports.createProduct = async (req, res) => {

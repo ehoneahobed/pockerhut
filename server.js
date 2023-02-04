@@ -6,6 +6,9 @@ const app = express();
 
 // import routers
 const userRoute = require('./routes/user');
+const productRoutes = require('./routes/product');
+const vendorRoutes = require('./routes/vendor');
+const blogRoutes = require("./routes/blog");
 
 
 // connecting to database
@@ -24,3 +27,6 @@ app.use(cors());
 app.use(express.json()); // middleware that allows the sending and receiving of json data
 
 app.use('/api/user', userRoute);
+app.use('/api/products', productRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/blogs', blogRoutes);

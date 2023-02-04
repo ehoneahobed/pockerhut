@@ -10,8 +10,7 @@ const blogSchema = new mongoose.Schema({
         required: true
     },
     featuredImage: {
-        type: String,
-        required: true
+        type: String
     },
     author: {
         type: mongoose.Schema.Types.ObjectId,

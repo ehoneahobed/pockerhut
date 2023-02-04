@@ -4,10 +4,10 @@ const { verifyTokenAndAdmin, verifyTokenAndAuthorization, verifyToken } = requir
 const router = require('express').Router();
 
 // create a new blog
-router.post('/', verifyTokenAndAdmin, uploadImage.single('featuredImage'), blogController.createBlog);
+router.post('/', verifyTokenAndAdmin, uploadImage, blogController.createBlog);
 
 // update a blog post
-router.put('/:id', verifyTokenAndAdmin, uploadImage.single('featuredImage'), blogController.updateBlog);
+router.put('/:id', verifyTokenAndAdmin, uploadImage, blogController.updateBlog);
 
 // deleting a blog post
 router.delete('/:id', verifyTokenAndAdmin, blogController.deleteBlog);
@@ -28,10 +28,12 @@ router.get('/', blogController.getBlogs);
 router.get('/comments', blogController.getBlogsWithComments);
 
 // create a new comment
-router.post('/comment/:id', CommentController.createComment);
+router.post('/comment/:id', blogController.createComment);
 
 // update a comment
-router.patch('/comment/:id', CommentController.updateComment);
+router.patch('/comment/:id', blogController.updateComment);
 
 // delete a comment
-router.delete('/comment/:id', CommentController.deleteComment);
+router.delete('/comment/:id', blogController.deleteComment);
+
+module.exports = router;
