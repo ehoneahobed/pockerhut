@@ -17,4 +17,6 @@ router.get('/:id', categoryController.getCategory);
 // get all categories
 router.get('/', categoryController.getCategories);
 
+// 
+
 module.exports = router;
