@@ -10,6 +10,8 @@ const productRoutes = require('./routes/product');
 const vendorRoutes = require('./routes/vendor');
 const blogRoutes = require("./routes/blog");
 const categoryRoutes = require("./routes/categories");
+const enquiryRoutes = require("./routes/enquiry");
+const agroserviceRoutes = require("./routes/agroservice");
 
 // connecting to database
 mongoose.set('strictQuery', true);
@@ -31,3 +33,5 @@ app.use('/api/products', productRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/enquiry', enquiryRoutes);
+app.use('/api/agroservice', agroserviceRoutes);

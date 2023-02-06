@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const commentSchema = new mongoose.Schema({
     content: {
         type: String,
@@ -12,6 +14,7 @@ const commentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Blog',
         required: true
+
     }
 }, {timestamps: true});
 

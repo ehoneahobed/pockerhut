@@ -28,12 +28,12 @@ router.get('/', blogController.getBlogs);
 router.get('/comments', blogController.getBlogsWithComments);
 
 // create a new comment
-router.post('/comment/:id', blogController.createComment);
+router.post('/:id/comment', verifyTokenAndAuthorization, blogController.createComment);
 
 // update a comment
 router.patch('/comment/:id', blogController.updateComment);
 
 // delete a comment
-router.delete('/comment/:id', blogController.deleteComment);
+router.delete('/comment/:id', verifyTokenAndAuthorization, blogController.deleteComment);
 
 module.exports = router;
