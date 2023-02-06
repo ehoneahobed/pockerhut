@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const categoryController = require('../controllers/categoryController');
+const categoryController = require('../controllers/categories');
 const { verifyTokenAndAdmin, verifyTokenAndAuthorization, verifyToken } = require('../controllers/verifyToken');
 
 // create a new category
