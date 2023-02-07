@@ -12,6 +12,8 @@ const blogRoutes = require("./routes/blog");
 const categoryRoutes = require("./routes/categories");
 const enquiryRoutes = require("./routes/enquiry");
 const agroserviceRoutes = require("./routes/agroservice");
+const weekendkillsRoutes = require("./routes/weekendkills");
+const vetserviceRoutes = require('./routes/vetservice');
 
 // connecting to database
 mongoose.set('strictQuery', true);
@@ -35,3 +37,5 @@ app.use('/api/blogs', blogRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/enquiry', enquiryRoutes);
 app.use('/api/agroservice', agroserviceRoutes);
+app.use('/api/weekendkills', weekendkillsRoutes);
+app.use('/api/vetservice', vetserviceRoutes);
