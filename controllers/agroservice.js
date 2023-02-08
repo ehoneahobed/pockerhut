@@ -61,9 +61,6 @@ exports.getAgroservice = async (req, res) => {
   }
 };
 
-// get all agroservice requests
-const Agroservice = require("path/to/AgroserviceModel");
-
 exports.getAllAgroservices = async (req, res) => {
   try {
     const agroservices = await Agroservice.find().sort({ createdAt: -1 });

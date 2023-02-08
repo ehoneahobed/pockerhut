@@ -4,6 +4,59 @@ const saltRounds = 10;
 const jwt = require("jsonwebtoken");
 
 // Create Vendor
+// exports.createVendor = async (req, res) => {
+//   // Validate the request
+//   if (
+//     !req.body.sellerAccountInformation ||
+//     !req.body.businessInformation ||
+//     !req.body.vendorBankAccount
+//   ) {
+//     return res.status(400).send({
+//       message:
+//         "Seller account information, business information and vendor bank account are required",
+//     });
+//   }
+
+//   // Get the uploaded file information
+//   const IDFile = req.file && req.file.fieldname === 'IDFile' && req.file.filename ? req.file.filename : '';
+//   const CACCertificateFile = req.file && req.file.fieldname === 'CACCertificateFile' && req.file.filename ? req.file.filename : '';
+//   const TINCertificateFile = req.file && req.file.fieldname === 'TINCertificateFile' && req.file.filename ? req.file.filename : '';
+//   const profilePhoto = req.file && req.file.fieldname === 'profilePhoto' && req.file.filename ? req.file.filename : '';
+
+//   // Update the businessInformation with the file information
+//   req.body.businessInformation.IDFile = IDFile;
+//   req.body.businessInformation.CACCertificateFile = CACCertificateFile;
+//   req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+
+//   // Update the profilePhoto with the file information
+//   req.body.profilePhoto = profilePhoto;
+
+//   // Encrypt password using bcrypt
+//   const password = req.body.sellerAccountInformation.password;
+//   const salt = await bcrypt.genSalt(saltRounds);
+//   const encryptedPassword = await bcrypt.hash(password, salt);
+//   req.body.sellerAccountInformation.password = encryptedPassword;
+
+//   // Create a new vendor
+//   const vendor = new Vendor({
+//     sellerAccountInformation: req.body.sellerAccountInformation,
+//     businessInformation: req.body.businessInformation,
+//     vendorBankAccount: req.body.vendorBankAccount,
+//     storeStatus: req.body.storeStatus || "pending",
+//     profilePhoto: req.body.profilePhoto,
+//   });
+
+//   try {
+//     // Save the vendor in the database
+//     const data = await vendor.save();
+//     res.send(data);
+//   } catch (err) {
+//     res.status(500).send({
+//       message: err.message || "Some error occurred while creating the vendor.",
+//     });
+//   }
+// };
+
 exports.createVendor = async (req, res) => {
   // Validate the request
   if (
@@ -16,6 +69,37 @@ exports.createVendor = async (req, res) => {
         "Seller account information, business information and vendor bank account are required",
     });
   }
+
+  // Get the uploaded file information
+  const IDFile =
+    req.files && req.files.IDFile && req.files.IDFile[0].filename
+      ? req.files.IDFile[0].filename
+      : "";
+  const CACCertificateFile =
+    req.files &&
+    req.files.CACCertificateFile &&
+    req.files.CACCertificateFile[0].filename
+      ? req.files.CACCertificateFile[0].filename
+      : "";
+  const TINCertificateFile =
+    req.files &&
+    req.files.TINCertificateFile &&
+    req.files.TINCertificateFile[0].filename
+      ? req.files.TINCertificateFile[0].filename
+      : "";
+  const profilePhoto =
+    req.files && req.files.profilePhoto && req.files.profilePhoto[0].filename
+      ? req.files.profilePhoto[0].filename
+      : "";
+
+  // Update the businessInformation with the file information
+  req.body.businessInformation.IDFile = IDFile;
+  req.body.businessInformation.CACCertificateFile = CACCertificateFile;
+  req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+
+  // Update the profilePhoto with the file information
+  req.body.profilePhoto = profilePhoto;
+
   // Encrypt password using bcrypt
   const password = req.body.sellerAccountInformation.password;
   const salt = await bcrypt.genSalt(saltRounds);
@@ -28,6 +112,7 @@ exports.createVendor = async (req, res) => {
     businessInformation: req.body.businessInformation,
     vendorBankAccount: req.body.vendorBankAccount,
     storeStatus: req.body.storeStatus || "pending",
+    profilePhoto: req.body.profilePhoto,
   });
 
   try {

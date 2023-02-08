@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const {uploadVendorFiles, uploadFile}  = require('../middlewares/uploadFile');
 const vendorController = require('../controllers/vendor');
 const { verifyTokenAndAdmin, verifyTokenAndAuthorization, verifyToken } = require('../controllers/verifyToken');
 
 // Create Vendor
-router.post('/', vendorController.createVendor);
+router.post('/', uploadVendorFiles, vendorController.createVendor);
 
 // login vendor
 router.post("/login", vendorController.loginVendor);

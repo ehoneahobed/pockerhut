@@ -60,6 +60,32 @@ exports.getUsers = async (req, res) => {
 }
 
 // create user billing
+// exports.createBilling = async (req, res) => {
+//     try {
+
+//         //  check if the optional fields were provided or not
+//         const fields = ['contact', 'address_1', 'address_2', 'country', 'state', 'town', 'default'];
+
+//         const data = fields.map(field => {
+//             if (req.body.hasOwnProperty(field)) {
+//                 return { [field]: req.body[field] };
+//             }
+//         });
+
+//         user_id = req.user.id;
+
+//         const billingFields = Object.assign({}, ...data, {user_id});
+//         const billing = new Billing(billingFields);
+
+
+//         const savedBilling = await billing.save();
+
+//         res.status(200).json(savedBilling);
+//     } catch (error) {
+//         res.status(500).json(error);
+//     }
+// }
+
 exports.createBilling = async (req, res) => {
     try {
 
@@ -77,6 +103,10 @@ exports.createBilling = async (req, res) => {
         const billingFields = Object.assign({}, ...data, {user_id});
         const billing = new Billing(billingFields);
 
+        // Check if default billing is set
+        if (req.body.hasOwnProperty('default') && req.body.default === true) {
+            const user = await User.findByIdAndUpdate(user_id, { billing_id: billing._id });
+        }
 
         const savedBilling = await billing.save();
 
@@ -85,6 +115,9 @@ exports.createBilling = async (req, res) => {
         res.status(500).json(error);
     }
 }
+
+
+
 
 
 // get user billing info
