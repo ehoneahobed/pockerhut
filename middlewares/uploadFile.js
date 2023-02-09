@@ -26,6 +26,33 @@ const upload = multer({
 
 exports.uploadImage = upload.single("featuredImage");
 
+// upload a maximum of 4 product images
+const productImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+  cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+  cb(null, Date.now() + "-" + file.originalname);
+  },
+  });
+  const imageFilter = (req, file, cb) => {
+  if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+  cb(null, true);
+  } else {
+  cb(null, false);
+  }
+  };
+  
+  const ImageUpload = multer({
+    storage: productImageStorage,
+    fileFilter: imageFilter,
+    limits: { fileSize: 2 * 1024 * 1024 },
+    });
+
+    exports.productImageUpload = ImageUpload.array("images", 4);
+
+
+
 // upload any file [PDF, Image, Docx] less than 5MB in size
 const storageFile = multer.diskStorage({
   destination: (req, file, cb) => {
