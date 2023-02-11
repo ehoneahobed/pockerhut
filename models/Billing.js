@@ -1,33 +1,34 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const billingSchema = new mongoose.Schema({
+const billingSchema = new mongoose.Schema(
+  {
     contact: {
-        type: String
+      type: String,
     },
     address_1: {
-        type: String,
-        required: true,
-        unique: true,
+      type: String,
+      required: true,
+      unique: true,
     },
     address_2: {
-        type: String
+      type: String,
     },
     country: {
-        type: String
+      type: String,
     },
-    
+
     state: {
-        type: String,
+      type: String,
     },
     town: {
-        type: String
+      type: String,
     },
     user_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-    }
-    
-}, {timestamps: true});
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  { timestamps: true }
+);
 
-
-module.exports = mongoose.model('Billing', billingSchema);
+module.exports = mongoose.model("Billing", billingSchema);
