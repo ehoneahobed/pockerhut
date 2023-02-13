@@ -1,23 +1,32 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product");
+const { productImageUpload } = require("../middlewares/uploadFile");
+const {
+    verifyTokenAndAdmin,
+    verifyTokenAndAuthorization,
+    verifyToken,
+  } = require("../controllers/verifyToken");
 
 // Create a product
-router.post("/", productController.createProduct);
+router.post("/", productImageUpload, productController.createProduct);
 
-// Update a product
-router.put("/:productId", productController.updateProduct);
+// update product approvalStatus
+router.put('/:id/approvalStatus', productController.updateApprovalStatus);
 
-// Delete a product
-router.delete("/:productId", productController.deleteProduct);
+// // Update a product
+// router.put("/:productId", productController.updateProduct);
 
-// Get a single product
-router.get("/:productId", productController.getProduct);
+// // Delete a product
+// router.delete("/:productId", productController.deleteProduct);
 
-// Get all products
-router.get("/", productController.getAllProducts);
+// // Get a single product
+// router.get("/:productId", productController.getProduct);
 
-// Get all approved products
-router.get("/approved", productController.getApprovedProducts);
+// // Get all products
+// router.get("/", productController.getAllProducts);
+
+// // Get all approved products
+// router.get("/approved", productController.getApprovedProducts);
 
 module.exports = router;

@@ -29,10 +29,10 @@ exports.uploadImage = upload.single("featuredImage");
 // upload a maximum of 4 product images
 const productImageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, "uploads/products");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
+    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_"));
   },
 });
 const imageFilter = (req, file, cb) => {
@@ -131,7 +131,7 @@ const vendorStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     oldFileName = file.originalname.trim();
-    console.log(oldFileName);
+    // console.log(oldFileName);
     cb(null, Date.now() + "-" + oldFileName.replace(/\s+/g, "_"));
   },
 });

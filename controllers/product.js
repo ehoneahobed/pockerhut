@@ -8,7 +8,7 @@ exports.createProduct = async (req, res) => {
         // Validate the request
         if (!req.body.category || !req.body.productInformation || !req.body.productDetails || !req.body.pricing) {
             return res.status(400).send({
-                message: "Product information, category, product details, and pricing details are required"
+                message: "Product information, category, product details, and pricing details are all required"
             });
         }
 
@@ -18,8 +18,7 @@ exports.createProduct = async (req, res) => {
             productInformation: req.body.productInformation,
             productDetails: req.body.productDetails,
             pricing: req.body.pricing,
-            images: req.body.images || [],
-            approvalStatus: req.body.approvalStatus || "pending",
+            images: req.files.map(file => file.filename) || [],
             productReviews: []
         });
 
@@ -30,6 +29,36 @@ exports.createProduct = async (req, res) => {
         res.status(500).send({
             message:
                 err.message || "Some error occurred while creating the product."
+        });
+    }
+};
+
+
+// update approvalStatus of a given product
+exports.updateApprovalStatus = async (req, res) => {
+    const id = req.params.id;
+    try {
+        const product = await Product.findById(id);
+
+        if (!product) {
+            return res.status(404).send({
+                message: "Product not found with id " + id
+            });
+        }
+
+        product.approvalStatus = req.body.approvalStatus;
+
+        const updatedProduct = await product.save();
+
+        res.send(updatedProduct);
+    } catch (err) {
+        if (err.kind === 'ObjectId') {
+            return res.status(404).send({
+                message: "Product not found with id " + id
+            });
+        }
+        return res.status(500).send({
+            message: "Error updating product with id " + id
         });
     }
 };
@@ -201,23 +230,23 @@ exports.getProductAnalytics = async (req, res) => {
 };
 
 // update the approval status of a product:
-exports.updateApprovalStatus = async (req, res) => {
-    const { productId, approvalStatus } = req.params;
+// exports.updateApprovalStatus = async (req, res) => {
+//     const { productId, approvalStatus } = req.params;
 
-    try {
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).send({
-                message: `Product not found with id ${productId}`
-            });
-        }
+//     try {
+//         const product = await Product.findById(productId);
+//         if (!product) {
+//             return res.status(404).send({
+//                 message: `Product not found with id ${productId}`
+//             });
+//         }
 
-        product.approvalStatus = approvalStatus;
-        const updatedProduct = await product.save();
-        return res.send(updatedProduct);
-    } catch (err) {
-        return res.status(500).send({
-            message: `Error updating approval status of product with id ${productId}`
-        });
-    }
-};
+//         product.approvalStatus = approvalStatus;
+//         const updatedProduct = await product.save();
+//         return res.send(updatedProduct);
+//     } catch (err) {
+//         return res.status(500).send({
+//             message: `Error updating approval status of product with id ${productId}`
+//         });
+//     }
+// };
