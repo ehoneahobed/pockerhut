@@ -26,6 +26,8 @@ const upload = multer({
 
 exports.uploadImage = upload.single("featuredImage");
 
+
+
 // upload a maximum of 4 product images
 const productImageStorage = multer.diskStorage({
   destination: (req, file, cb) => {

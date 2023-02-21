@@ -14,19 +14,19 @@ router.post("/", productImageUpload, productController.createProduct);
 // update product approvalStatus
 router.put('/:id/approvalStatus', productController.updateApprovalStatus);
 
-// // Update a product
-// router.put("/:productId", productController.updateProduct);
+// Update a product
+router.patch("/:productId", productImageUpload, productController.updateProduct);
 
-// // Delete a product
-// router.delete("/:productId", productController.deleteProduct);
+// Delete a product
+router.delete("/:productId", productController.deleteProduct);
 
-// // Get a single product
-// router.get("/:productId", productController.getProduct);
+// Get all approved products
+router.get("/approved", productController.getApprovedProducts);
 
-// // Get all products
-// router.get("/", productController.getAllProducts);
+// Get a single product
+router.get("/:productId", productController.getProduct);
 
-// // Get all approved products
-// router.get("/approved", productController.getApprovedProducts);
+// Get all products
+router.get("/", productController.getAllProducts);
 
 module.exports = router;

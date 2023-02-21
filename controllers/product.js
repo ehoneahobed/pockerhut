@@ -6,7 +6,7 @@ const Category = require('../models/Categories');
 exports.createProduct = async (req, res) => {
     try {
         // Validate the request
-        if (!req.body.category || !req.body.productInformation || !req.body.productDetails || !req.body.pricing) {
+        if (!req.body.category || !req.body.information || !req.body.details || !req.body.pricing) {
             return res.status(400).send({
                 message: "Product information, category, product details, and pricing details are all required"
             });
@@ -15,8 +15,8 @@ exports.createProduct = async (req, res) => {
         // Create a new product
         const product = new Product({
             category: req.body.category,
-            productInformation: req.body.productInformation,
-            productDetails: req.body.productDetails,
+            information: req.body.information,
+            details: req.body.details,
             pricing: req.body.pricing,
             images: req.files.map(file => file.filename) || [],
             productReviews: []
@@ -65,26 +65,61 @@ exports.updateApprovalStatus = async (req, res) => {
 
 
 // Updating a product
-exports.updateProduct = async (req, res) => {
-    // Validate the request
-    if (!req.body.category || !req.body.productInformation || !req.body.productDetails || !req.body.pricing) {
-        return res.status(400).send({
-            message: "Product information, category, product details, and pricing details are required"
-        });
-    }
+// exports.updateProduct = async (req, res) => {
+//     // Validate the request
+//     if (!req.body.category || !req.body.information || !req.body.details || !req.body.pricing) {
+//         return res.status(400).send({
+//             message: "Product information, category, product details, and pricing details are required"
+//         });
+//     }
 
+//     try {
+//         // Find the product and update it with the request body
+//         const product = await Product.findByIdAndUpdate(
+//             req.params.productId,
+//             {
+//                 category: req.body.category,
+//                 information: req.body.information,
+//                 details: req.body.details,
+//                 pricing: req.body.pricing,
+//                 images: req.files.map(file => file.filename) || [],
+//                 approvalStatus: req.body.approvalStatus || "pending"
+//             },
+//             { new: true }
+//         );
+
+//         if (!product) {
+//             return res.status(404).send({
+//                 message: "Product not found with id " + req.params.productId
+//             });
+//         }
+//         res.send(product);
+//     } catch (err) {
+//         if (err.kind === "ObjectId") {
+//             return res.status(404).send({
+//                 message: "Product not found with id " + req.params.productId
+//             });
+//         }
+//         return res.status(500).send({
+//             message: "Error updating product with id " + req.params.productId
+//         });
+//     }
+// };
+
+exports.updateProduct = async (req, res) => {
     try {
+        const updates = {};
+        if (req.body.category) updates.category = req.body.category;
+        if (req.body.information) updates.information = req.body.information;
+        if (req.body.details) updates.details = req.body.details;
+        if (req.body.pricing) updates.pricing = req.body.pricing;
+        if (req.files) updates.images = req.files.map(file => file.filename);
+        if (req.body.approvalStatus) updates.approvalStatus = req.body.approvalStatus;
+
         // Find the product and update it with the request body
         const product = await Product.findByIdAndUpdate(
             req.params.productId,
-            {
-                category: req.body.category,
-                productInformation: req.body.productInformation,
-                productDetails: req.body.productDetails,
-                pricing: req.body.pricing,
-                images: req.body.images || [],
-                approvalStatus: req.body.approvalStatus || "pending"
-            },
+            updates,
             { new: true }
         );
 
@@ -105,6 +140,7 @@ exports.updateProduct = async (req, res) => {
         });
     }
 };
+
 
 
 // Deleting a product
@@ -250,3 +286,16 @@ exports.getProductAnalytics = async (req, res) => {
 //         });
 //     }
 // };
+
+// get all featured products
+exports.getFeaturedProducts = async (req, res) => {
+    try {
+      const products = await Product.find({ featured: true });
+      res.send(products);
+    } catch (err) {
+      return res.status(500).send({
+        message: "Error retrieving featured products",
+      });
+    }
+  };
+  
