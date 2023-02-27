@@ -13,7 +13,7 @@ const userController = require("../controllers/users");
 router.post("/signup", authController.registerUser);
 
 // login user
-router.get("/login", authController.loginUser);
+router.post("/login", authController.loginUser);
 
 // update user
 router.put("/:id", verifyTokenAndAuthorization, userController.updateUser);
