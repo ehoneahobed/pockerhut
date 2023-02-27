@@ -37,7 +37,7 @@ exports.createReview = async (req, res) => {
   };
 
 // get all reviews
-exports.getReviews = async (req, res) => {
+exports.getAllReviews = async (req, res) => {
   try {
     const reviews = await Review.find();
     res.status(200).json(reviews);
