@@ -1,4 +1,4 @@
-const Vendor = require("../models/WeekendKills");
+const WeekendKills = require("../models/WeekendKills");
 
 // Create WeekendKills request
 exports.createWeekendKills = async (req, res) => {
@@ -12,9 +12,9 @@ exports.createWeekendKills = async (req, res) => {
     });
 
     const savedWeekendKills = await weekendKills.save();
-    res.status(201).json(savedWeekendKills);
+    res.status(201).json({ status: "success", savedWeekendKills});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ status: "failed", error: error.message });
   }
 };
 
@@ -27,32 +27,26 @@ exports.deleteWeekendKills = async (req, res) => {
     if (!deletedWeekendKills)
       return res.status(404).json({ error: "WeekendKills request not found" });
 
-    res.status(200).json(deletedWeekendKills);
+    res.status(200).json({ status: "success", deletedWeekendKills});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ status: "failed", error: error.message });
   }
 };
 
 // Update WeekendKills request
 exports.updateWeekendKills = async (req, res) => {
   try {
-    const updatedWeekendKills = await WeekendKills.findByIdAndUpdate(
-      req.params.id,
-      {
-        fullName: req.body.fullName,
-        email: req.body.email,
-        phoneNumber: req.body.phoneNumber,
-        subject: req.body.subject,
-        message: req.body.message,
-      },
+    const updatedWeekendKills = await WeekendKills.findOneAndUpdate(
+      { _id: req.params.id },
+      { $set: req.body },
       { new: true }
     );
     if (!updatedWeekendKills)
-      return res.status(404).json({ error: "WeekendKills request not found" });
+      return res.status(404).json({ status: "failed", error: "WeekendKills request not found" });
 
-    res.status(200).json(updatedWeekendKills);
+    res.status(200).json({ status: "success", updatedWeekendKills});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ status: "failed", error: error.message });
   }
 };
 
@@ -61,11 +55,11 @@ exports.getWeekendKills = async (req, res) => {
   try {
     const weekendKills = await WeekendKills.findById(req.params.id);
     if (!weekendKills)
-      return res.status(404).json({ error: "WeekendKills request not found" });
+      return res.status(404).json({ status: "failed", error: "WeekendKills request not found" });
 
-    res.status(200).json(weekendKills);
+    res.status(200).json({ status: "success", weekendKills});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ status: "failed", error: error.message });
   }
 };
 
@@ -73,8 +67,8 @@ exports.getWeekendKills = async (req, res) => {
 exports.getAllWeekendKills = async (req, res) => {
   try {
     const weekendKills = await WeekendKills.find({}).sort({ createdAt: -1 });
-    res.status(200).json(weekendKills);
+    res.status(200).json({ status: "success", weekendKills});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ status: "failed", error: error.message });
   }
 };
