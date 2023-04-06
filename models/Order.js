@@ -44,7 +44,6 @@ const OrderSchema = new Schema({
   },
   tax: {
     type: Number,
-    required: true,
   },
   totalAmount: {
     type: Number,

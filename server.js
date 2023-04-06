@@ -21,6 +21,7 @@ const vetsRoutes = require('./routes/vets');
 const logisticRoutes = require('./routes/logistic');
 const paymentRoutes = require('./routes/payment');
 const trackingRoutes = require('./routes/tracking');
+const ratingRoutes = require('./routes/rating');
 
 // connecting to database
 mongoose.set('strictQuery', true);
@@ -53,3 +54,4 @@ app.use('/api/vets', vetsRoutes);
 app.use('/api/logistic', logisticRoutes);
 app.use('/api/pay', paymentRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/ratings', ratingRoutes);

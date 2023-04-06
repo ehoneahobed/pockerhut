@@ -104,3 +104,19 @@ exports.getPreviousPayments = async (req, res) => {
     }
   };
   
+
+// Update vendor wallet balance by vendor ID
+exports.updateVendorWalletBalanceById = async (vendorId, amount, isRefund) => {
+    try {
+      const vendorWallet = await VendorWallet.findOne({ vendorId });
+      if (!vendorWallet) {
+        throw new Error('Vendor wallet not found');
+      }
+      vendorWallet.balance += isRefund ? -amount : amount;
+      await vendorWallet.save();
+      return vendorWallet;
+    } catch (error) {
+      throw error;
+    }
+  };
+  
