@@ -21,6 +21,11 @@ const paymentSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true
+    },
+    order: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order',
+        required: true
     }
 },
 {
