@@ -87,16 +87,98 @@ exports.getBlog = async (req, res) => {
 };
 
 // getting all blog posts
+// exports.getBlogs = async (req, res) => {
+//   try {
+//     // Get all blogs
+//     const blogs = await Blog.find();
+
+//     res.status(200).json(blogs);
+//   } catch (error) {
+//     res.status(500).json(error);
+//   }
+// };
+
+
+// ************ Get blog posts with pagination ****************
+// exports.getBlogs = async (req, res) => {
+//   try {
+//     const page = req.query.page || 1;
+//     const limit = req.query.limit || 10;
+
+//     const startIndex = (page - 1) * limit;
+//     const endIndex = page * limit;
+
+//     const blogs = await Blog.find().sort({ createdAt: -1 }).skip(startIndex).limit(limit);
+//     const totalBlogs = await Blog.countDocuments();
+
+//     const metadata = {
+//       totalBlogs,
+//       totalPages: Math.ceil(totalBlogs / limit),
+//       currentPage: page,
+//       hasNextPage: endIndex < totalBlogs,
+//       hasPrevPage: startIndex > 0
+//     };
+
+//     res.status(200).json({ metadata, blogs });
+//   } catch (error) {
+//     res.status(500).json(error);
+//   }
+// };
+
+
+// ******************** Get blog posts with search queries and pagination ********
 exports.getBlogs = async (req, res) => {
   try {
-    // Get all blogs
-    const blogs = await Blog.find();
+    // Set default values for page and limit
+    let { page = 1, limit = 10, search } = req.query;
 
-    res.status(200).json(blogs);
+    // Convert the page and limit values to integers
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // Set up the pagination options
+    const skip = (page - 1) * limit;
+    const options = {
+      skip,
+      limit
+    };
+
+    // Set up the search options if a search query is provided
+    let searchOptions = {};
+    if (search) {
+      searchOptions = {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { content: { $regex: search, $options: 'i' } },
+        ]
+      };
+    }
+
+    // Find the total number of blogs based on the search options
+    const totalBlogs = await Blog.countDocuments(searchOptions);
+
+    // Find the blogs based on the search and pagination options
+    const blogs = await Blog.find(searchOptions, null, options);
+
+    // Create the metadata object with the pagination information
+    const metadata = {
+      page,
+      limit,
+      totalBlogs,
+      totalPages: Math.ceil(totalBlogs / limit),
+      hasNextPage: page * limit < totalBlogs,
+      hasPrevPage: page > 1,
+    };
+
+    // Send the response with the metadata and the blogs
+    res.status(200).json({ metadata, blogs });
   } catch (error) {
     res.status(500).json(error);
   }
 };
+
+
+
 
 // getting a blog post with all comments
 exports.getBlogWithComments = async (req, res) => {
@@ -144,6 +226,60 @@ exports.getBlogsWithComments = async (req, res) => {
     res.status(500).json(error);
   }
 };
+
+// ******************** Get blog posts with search queries and pagination ********
+// exports.getBlogsgetBlogsWithComments = async (req, res) => {
+//   try {
+//     // Set default values for page and limit
+//     let { page = 1, limit = 10, search } = req.query;
+
+//     // Convert the page and limit values to integers
+//     page = parseInt(page);
+//     limit = parseInt(limit);
+
+//     // Set up the pagination options
+//     const skip = (page - 1) * limit;
+//     const options = {
+//       skip,
+//       limit
+//     };
+
+//     // Set up the search options if a search query is provided
+//     let searchOptions = {};
+//     if (search) {
+//       searchOptions = {
+//         $or: [
+//           { title: { $regex: search, $options: 'i' } },
+//           { content: { $regex: search, $options: 'i' } },
+//         ]
+//       };
+//     }
+
+//     console.log(search, searchOptions);
+
+//     // Find the total number of blogs based on the search options
+//     const totalBlogs = await Blog.countDocuments(searchOptions);
+
+//     // Find the blogs based on the search and pagination options
+//     const blogs = await Blog.find(searchOptions, null, options).populate("comments");
+
+//     // Create the metadata object with the pagination information
+//     const metadata = {
+//       page,
+//       limit,
+//       totalBlogs,
+//       totalPages: Math.ceil(totalBlogs / limit),
+//       hasNextPage: page * limit < totalBlogs,
+//       hasPrevPage: page > 1,
+//     };
+
+//     // Send the response with the metadata and the blogs
+//     res.status(200).json({ metadata, blogs });
+//   } catch (error) {
+//     res.status(500).json(error);
+//   }
+// };
+
 
 // create a new comment
 exports.createComment = async (req, res) => {
