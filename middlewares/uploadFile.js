@@ -1,8 +1,11 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const cloudinary = require('../utils/cloudinary');
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-// upload images not more than 2MB in size
+
+// upload images not more than 2MB in size (to local storage)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
@@ -26,7 +29,156 @@ const upload = multer({
 
 exports.uploadImage = upload.single("featuredImage");
 
+// upload the image that multer uploaded locally to cloudinary
+exports.uploadLoadedImage = async (req, res, next) => {
+  try {
+    console.log(req.file)
+    // Upload image to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "porkerhut",
+    });
 
+    // Add Cloudinary URL to request object
+    req.file.cloudinaryUrl = result.secure_url;
+    console.log(result);
+
+    // Call next middleware
+    next();
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// ******************* END OF FILE UPLOAD FROM LOCAL TO CLOUDINARY ****
+
+
+// ********* START OF DIRECT UPLOAD TO CLOUDINARY THROUGH MEMORY *****
+
+// upload single image to cloudinary
+// const imageStorage = new CloudinaryStorage({
+//   cloudinary: cloudinary,
+//   params: {
+//     folder: "porkerhut",
+//     allowed_formats: ["jpg", "jpeg", "png", "svg"]
+//   },
+// });
+
+// const imageUpload = multer({ storage: imageStorage  });
+
+// exports.uploadSingleImage = imageUpload.single("featuredImage");
+
+// // Middleware to upload the image to Cloudinary
+// exports.uploadToCloudinary = async (req, res, next) => {
+//   try {
+//     // check if there is a file uploaded by Multer
+//     if (!req.file) {
+//       throw new Error("No file uploaded");
+//     }
+
+//     console.log(req.file);
+
+//     // Upload the file to Cloudinary
+//     const result = await cloudinary.uploader.upload_stream(
+//       {
+//         folder: "porkerhut",
+//         allowed_formats: ["jpg", "jpeg", "png", "svg"]
+//       },
+//       (error, result) => {
+//         if (error) {
+//           throw new Error(error);
+//         }
+
+//         console.log(result);
+
+//         // Add the Cloudinary URL to the request body
+//         req.body.cloudinaryUrl = result.secure_url;
+//         next();
+//       }
+//     ).end(req.file.buffer);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+
+// Configure Multer to store files in memory
+const imageStorage = multer.memoryStorage();
+
+// Configure Multer to accept only certain file types
+const fileFilterCloudinary = (req, file, cb) => {
+  const allowedFileTypes = ["image/jpeg", "image/png", "image/svg+xml"];
+  if (allowedFileTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    console.log("Invalid file type");
+    cb(new Error("Invalid file type."), false);
+  }
+};
+
+const imageUpload = multer({ storage: imageStorage, fileFilter: fileFilterCloudinary });
+
+exports.uploadSingleImage = imageUpload.single("featuredImage");
+
+exports.uploadToCloudinary = async (req, res, next) => {
+  try {
+    // Check if there is a file uploaded by Multer
+    if (!req.file) {
+      throw new Error("No file uploaded");
+    }
+
+    console.log({ file: req.file})
+
+    const result = await cloudinary.uploader.upload_stream(
+            {
+              folder: "porkerhut",
+              allowed_formats: ["jpg", "jpeg", "png", "svg"]
+            },
+            (error, result) => {
+              if (error) {
+                throw new Error(error);
+              }
+      
+              console.log(result);
+      
+              // Add the Cloudinary URL to the request body
+              req.body.featuredImage = result.secure_url;
+              next();
+            }
+          ).end(req.file.buffer);
+
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ****************** END OF UPLOAD TO CLOUDINARY DIRECTLY **************
 
 // upload a maximum of 4 product images
 const productImageStorage = multer.diskStorage({

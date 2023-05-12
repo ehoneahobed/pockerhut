@@ -9,7 +9,7 @@ router.post("/", announcementController.createAnnouncement);
 router.get("/", announcementController.getAllAnnouncements);
 
 // Get announcement by ID
-router.get("/:id", announcementController.getAnnouncementById);
+// router.get("/:id", announcementController.getAnnouncementById);
 
 // Update announcement by ID
 router.put("/:id", announcementController.updateAnnouncement);
