@@ -1,6 +1,6 @@
 const request = require('request');
 
-const Payment = require('../models/payment');
+const Payment = require('../models/Payment');
 const _ = require('lodash');
 
 const {initializePayment, verifyPayment, getBanks} = require('../utils/payment')(request);
