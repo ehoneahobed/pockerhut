@@ -180,6 +180,9 @@ exports.uploadToCloudinary = async (req, res, next) => {
 
 // ****************** END OF UPLOAD TO CLOUDINARY DIRECTLY **************
 
+
+
+// ************* START OF MULTIPLE UPLOAD TO LOCAL STORAGE BY MULTER ************
 // upload a maximum of 4 product images
 const productImageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -322,3 +325,71 @@ exports.uploadVendorFiles = multer({
   { name: "TINCertificateFile", maxCount: 1 },
   { name: "profilePhoto", maxCount: 1 },
 ]);
+
+
+
+
+// ******* UPLOAD MULTIPLE IMAGES TO CLOUDINARY ***********************
+
+
+const cloudinaryStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "porkerhut/products",
+    allowed_formats: ["jpg", "jpeg", "png", "svg"],
+  },
+});
+
+// Configure Multer to accept only certain file types
+const imageFilterCloudinary = (req, file, cb) => {
+  const allowedFileTypes = ["image/jpeg", "image/png", "image/svg+xml"];
+  if (allowedFileTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    console.log("Invalid file type");
+    cb(new Error("Invalid file type."), false);
+  }
+};
+
+// Create the Multer instance with Cloudinary storage and file filter
+const imageMultipleUpload = multer({
+  storage: cloudinaryStorage,
+  fileFilter: imageFilterCloudinary,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // Increase the file size limit to 5 MB
+  },
+});
+
+exports.uploadMultipleImages = imageMultipleUpload.array("productImages", 4);
+
+exports.uploadMultiToCloudinary = async (req, res, next) => {
+  try {
+    // Check if there are files uploaded by Multer
+    if (!req.files || req.files.length === 0) {
+      throw new Error("No files uploaded");
+    }
+
+    urls = []
+    // Upload all files to Cloudinary in parallel
+    await Promise.all(
+      req.files.map(async file => {
+        urls.push(file.path)
+        if (file.size === 0) {
+          console.log(`${file.filename} File is empty`);
+          return;
+        }
+
+        await cloudinary.uploader.upload_stream(file.buffer);
+        // console.log(urls);
+        return urls;
+      })
+    );
+
+    // Add the Cloudinary URLs to the request body
+    req.body.productImages = urls;
+
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

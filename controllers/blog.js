@@ -1,5 +1,6 @@
 const Blog = require("../models/Blog");
 const Comment = require("../models/Comments");
+const paginateAndSearch = require('../utils/search');
 
 // create a new blog post
 exports.createBlog = async (req, res) => {
@@ -154,21 +155,24 @@ exports.getBlogs = async (req, res) => {
       };
     }
 
-    // Find the total number of blogs based on the search options
-    const totalBlogs = await Blog.countDocuments(searchOptions);
+    // // Find the total number of blogs based on the search options
+    // const totalBlogs = await Blog.countDocuments(searchOptions);
 
-    // Find the blogs based on the search and pagination options
-    const blogs = await Blog.find(searchOptions, null, options);
+    // // Find the blogs based on the search and pagination options
+    // const blogs = await Blog.find(searchOptions, null, options);
 
-    // Create the metadata object with the pagination information
-    const metadata = {
-      page,
-      limit,
-      totalBlogs,
-      totalPages: Math.ceil(totalBlogs / limit),
-      hasNextPage: page * limit < totalBlogs,
-      hasPrevPage: page > 1,
-    };
+    // // Create the metadata object with the pagination information
+    // const metadata = {
+    //   page,
+    //   limit,
+    //   totalBlogs,
+    //   totalPages: Math.ceil(totalBlogs / limit),
+    //   hasNextPage: page * limit < totalBlogs,
+    //   hasPrevPage: page > 1,
+    // };
+
+    // Use the helper function to fetch the blogs with pagination and search
+    const { metadata, documents: blogs } = await paginateAndSearch(Blog, searchOptions, page, limit);
 
     // Send the response with the metadata and the blogs
     res.status(200).json({ metadata, blogs });

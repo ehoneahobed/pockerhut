@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product");
-const { productImageUpload } = require("../middlewares/uploadFile");
+const { productImageUpload, uploadMultipleImages, uploadMultiToCloudinary } = require("../middlewares/uploadFile");
 const {
     verifyTokenAndAdmin,
     verifyTokenAndAuthorization,
@@ -9,7 +9,7 @@ const {
   } = require("../controllers/verifyToken");
 
 // Create a product
-router.post("/", productImageUpload, productController.createProduct);
+router.post("/", uploadMultipleImages, uploadMultiToCloudinary, productController.createProduct);
 
 // update product approvalStatus
 router.put('/:id/approvalStatus', productController.updateApprovalStatus);

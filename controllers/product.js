@@ -12,13 +12,15 @@ exports.createProduct = async (req, res) => {
             });
         }
 
+        // console.log(req.body.productImages)
+
         // Create a new product
         const product = new Product({
             category: req.body.category,
             information: req.body.information,
             details: req.body.details,
             pricing: req.body.pricing,
-            images: req.files.map(file => file.filename) || [],
+            images: req.body.productImages || [],
             productReviews: []
         });
 
