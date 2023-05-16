@@ -48,7 +48,7 @@ const pricingSchema = new mongoose.Schema({
 });
 
 // const imagesSchema = new mongoose.Schema({
-  
+
 // });
 
 const productSchema = new mongoose.Schema(
@@ -80,6 +80,10 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    avgRating: {
+      type: Number,
+      default: 0,
+    },
     reviews: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -89,7 +93,7 @@ const productSchema = new mongoose.Schema(
     vendor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vendor",
-    }
+    },
   },
   { timestamps: true }
 );

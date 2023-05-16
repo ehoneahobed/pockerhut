@@ -1,4 +1,4 @@
-const { uploadImage } = require("../middlewares/uploadFile");
+const { uploadImage, uploadSingleImage, uploadToCloudinary, uploadLoadedImage } = require("../middlewares/uploadFile");
 const blogController = require("../controllers/blog");
 const {
   verifyTokenAndAdmin,
@@ -8,7 +8,7 @@ const {
 const router = require("express").Router();
 
 // create a new blog
-router.post("/", verifyTokenAndAdmin, uploadImage, blogController.createBlog);
+router.post("/", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, blogController.createBlog);
 
 // update a blog post
 router.put("/:id", verifyTokenAndAdmin, uploadImage, blogController.updateBlog);

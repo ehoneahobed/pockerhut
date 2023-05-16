@@ -16,6 +16,13 @@ const weekendkillsRoutes = require("./routes/weekendkills");
 const vetserviceRoutes = require('./routes/vetservice');
 const reviewRoutes = require('./routes/review');
 const cartRoutes = require('./routes/cart');
+const notificationSettingRoutes = require('./routes/notificationSetting');
+const vetsRoutes = require('./routes/vets');
+const logisticRoutes = require('./routes/logistic');
+const paymentRoutes = require('./routes/payment');
+const trackingRoutes = require('./routes/tracking');
+const ratingRoutes = require('./routes/rating');
+const announcementRoutes = require('./routes/announcement');
 
 // connecting to database
 mongoose.set('strictQuery', true);
@@ -43,3 +50,10 @@ app.use('/api/weekendkills', weekendkillsRoutes);
 app.use('/api/vetservice', vetserviceRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/notification', notificationSettingRoutes);
+app.use('/api/vets', vetsRoutes);
+app.use('/api/logistic', logisticRoutes);
+app.use('/api/pay', paymentRoutes);
+app.use('/api/tracking', trackingRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/announcement', announcementRoutes);

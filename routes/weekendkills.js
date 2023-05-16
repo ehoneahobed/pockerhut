@@ -2,16 +2,23 @@ const express = require("express");
 const router = express.Router();
 const weekendKillsController = require("../controllers/weekendkills");
 
-router.post("/createWeekendKills", weekendKillsController.createWeekendKills);
+const {
+  verifyTokenAndAdmin,
+  verifyTokenAndAuthorization,
+  verifyToken,
+} = require("../controllers/verifyToken");
+
+
+router.post("/", weekendKillsController.createWeekendKills);
 router.delete(
-  "/deleteWeekendKills/:id",
+  "/:id", verifyTokenAndAdmin, 
   weekendKillsController.deleteWeekendKills
 );
-router.put(
-  "/updateWeekendKills/:id",
+router.patch(
+  "/:id", 
   weekendKillsController.updateWeekendKills
 );
-router.get("/getWeekendKills/:id", weekendKillsController.getWeekendKills);
-router.get("/getAllWeekendKills", weekendKillsController.getAllWeekendKills);
+router.get("/:id", verifyTokenAndAdmin, weekendKillsController.getWeekendKills);
+router.get("/", verifyTokenAndAdmin, weekendKillsController.getAllWeekendKills);
 
 module.exports = router;

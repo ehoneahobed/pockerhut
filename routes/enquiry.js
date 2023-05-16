@@ -7,24 +7,24 @@ const {
   verifyToken,
 } = require("../controllers/verifyToken");
 
-router.post("/createEnquiry", enquiryController.createEnquiry);
-router.put(
-  "/updateEnquiry/:id",
+router.post("/create", enquiryController.createEnquiry);
+router.patch(
+  "/:id",
   verifyTokenAndAdmin,
   enquiryController.updateEnquiry
 );
 router.get(
-  "/getEnquiry/:id",
+  "/:id",
   verifyTokenAndAdmin,
   enquiryController.getEnquiry
 );
 router.get(
-  "/getAllEnquiries",
+  "/",
   verifyTokenAndAdmin,
   enquiryController.getAllEnquiries
 );
 router.delete(
-  "/deleteEnquiry/:id",
+  "/:id",
   verifyTokenAndAdmin,
   enquiryController.deleteEnquiry
 );
