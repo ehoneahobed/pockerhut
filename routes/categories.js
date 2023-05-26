@@ -1,26 +1,56 @@
 const router = require("express").Router();
-const categoryController = require("../controllers/categories");
 const {
   verifyTokenAndAdmin,
   verifyTokenAndAuthorization,
   verifyToken,
 } = require("../controllers/verifyToken");
 
-// create a new category
-router.post("/", verifyTokenAndAdmin, categoryController.createCategory);
+const {
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getCategory,
+  getCategories,
+  createSubcategory,
+  updateSubcategory,
+  deleteSubcategory,
+  getSubcategory,
+  getSubcategories
+} = require("../controllers/categories");
 
-// update a category
-router.put("/:id", verifyTokenAndAdmin, categoryController.updateCategory);
+// CATEGORIES
 
-// delete a category
-router.delete("/:id", verifyTokenAndAdmin, categoryController.deleteCategory);
+// Create a new category
+router.post("/categories", verifyTokenAndAdmin, createCategory);
 
-// get a single category
-router.get("/:id", categoryController.getCategory);
+// Update a category
+router.put("/categories/:id", verifyTokenAndAdmin, updateCategory);
 
-// get all categories
-router.get("/", categoryController.getCategories);
+// Delete a category
+router.delete("/categories/:id", verifyTokenAndAdmin, deleteCategory);
 
-//
+// Get a single category
+router.get("/categories/:id", getCategory);
+
+// Get all categories
+router.get("/categories", getCategories);
+
+
+// SUBCATEGORIES
+
+// Create a new subcategory
+router.post("/subcategories", verifyTokenAndAdmin, createSubcategory);
+
+// Update a subcategory
+router.put("/subcategories/:id", verifyTokenAndAdmin, updateSubcategory);
+
+// Delete a subcategory
+router.delete("/subcategories/:id", verifyTokenAndAdmin, deleteSubcategory);
+
+// Get a single subcategory 
+router.get("/subcategories/:id", getSubcategory);
+
+// Get all subcategories
+router.get("/subcategories", getSubcategories);
 
 module.exports = router;

@@ -5,12 +5,29 @@ const productInformationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  productBreed: {
-    type: String,
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
+    required: true,
   },
-  typeOfMeat: {
-    type: String,
+  subcategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Subcategory",
+    required: true,
   },
+  categoryQuestions: [
+    {
+      question: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "CategoryQuestion",
+        required: true,
+      },
+      answer: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
 });
 
 const productDetailsSchema = new mongoose.Schema({
@@ -21,6 +38,9 @@ const productDetailsSchema = new mongoose.Schema({
     type: String,
   },
   cookingMethod: {
+    type: String,
+  },
+  nutritionalValue: {
     type: String,
   },
   deliveryDetails: {
@@ -53,11 +73,6 @@ const pricingSchema = new mongoose.Schema({
 
 const productSchema = new mongoose.Schema(
   {
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: true,
-    },
     information: {
       type: productInformationSchema,
     },

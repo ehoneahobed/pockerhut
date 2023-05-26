@@ -2,38 +2,43 @@ const Product = require('../models/Product')
 const Category = require('../models/Categories');
 // const Review = require("../models/");
 
-// Creating a product
+// Create a new product
 exports.createProduct = async (req, res) => {
     try {
-        // Validate the request
-        if (!req.body.category || !req.body.information || !req.body.details || !req.body.pricing) {
-            return res.status(400).send({
-                message: "Product information, category, product details, and pricing details are all required"
-            });
-        }
-
-        // console.log(req.body.productImages)
-
-        // Create a new product
-        const product = new Product({
-            category: req.body.category,
-            information: req.body.information,
-            details: req.body.details,
-            pricing: req.body.pricing,
-            images: req.body.productImages || [],
-            productReviews: []
+      // Validate the request
+      if (
+        !req.body.category ||
+        !req.body.information ||
+        !req.body.details ||
+        !req.body.pricing
+      ) {
+        return res.status(400).send({
+          message:
+            "Product information, category, product details, and pricing details are all required",
         });
-
-        // Save the product in the database
-        const savedProduct = await product.save();
-        res.send(savedProduct);
+      }
+  
+      // Create a new product
+      const product = new Product({
+        category: req.body.category,
+        information: req.body.information,
+        details: req.body.details,
+        pricing: req.body.pricing,
+        images: req.body.productImages || [],
+        productReviews: [],
+      });
+  
+      // Save the product in the database
+      const savedProduct = await product.save();
+  
+      res.send(savedProduct);
     } catch (err) {
-        res.status(500).send({
-            message:
-                err.message || "Some error occurred while creating the product."
-        });
+      res.status(500).send({
+        message: err.message || "Some error occurred while creating the product.",
+      });
     }
-};
+  };
+  
 
 
 // update approvalStatus of a given product
