@@ -50,9 +50,24 @@ const paystack = (request) => {
         request(options, callback);
     };
 
-    
+    const getAccountDetails = (accountNumber, bankCode, mycallback) => {
+        const options = {
+            url: `https://api.paystack.co/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`,
+            headers: {
+                authorization: MySecretKey,
+                'content-type': 'application/json',
+                'cache-control': 'no-cache'
+            }
+        };
 
-    return {initializePayment, verifyPayment, getBanks};
+        const callback = (error, response, body) => {
+            return mycallback(error, body);
+        };
+
+        request(options, callback);
+    }
+
+    return {initializePayment, verifyPayment, getBanks, getAccountDetails};
 }
 
 module.exports = paystack;

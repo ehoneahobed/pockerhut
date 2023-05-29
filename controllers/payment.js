@@ -37,3 +37,14 @@ exports.getBanks = async (req, res) => {
         res.status(500).json({status: "Failed", message : error.message});
     }
 }
+
+exports.getAccountDetails = async (req, res) => {
+    try {
+        const accountNumber = req.query.account_number;
+        const bankCode = req.query.bank_code;
+        const response = await paymentInstance.AccountDetails(accountNumber, bankCode);
+        res.status(200).json({ status: 'success', data: response })
+    } catch (error) {
+        res.status(500).json({ status: "Failed", message: error.message });
+    }
+};
