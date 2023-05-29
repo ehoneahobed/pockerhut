@@ -1,5 +1,5 @@
 const express = require('express');
-const { startPayment, createPayment, getPayment, getBanks } = require('../controllers/payment');
+const { startPayment, createPayment, getPayment, getBanks, getAccountDetails } = require('../controllers/payment');
 const {
     verifyTokenAndAdmin,
     verifyTokenAndAuthorization,
@@ -12,5 +12,6 @@ router.post('/', startPayment);
 router.get('/create', createPayment);
 router.get('/details', getPayment);
 router.get('/banks', getBanks);
+router.get('/account-details', getAccountDetails);
 
 module.exports = router;

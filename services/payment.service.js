@@ -3,7 +3,7 @@ const request = require('request');
 const Payment = require('../models/Payment');
 const _ = require('lodash');
 
-const {initializePayment, verifyPayment, getBanks} = require('../utils/payment')(request);
+const {initializePayment, verifyPayment, getBanks, getAccountDetails} = require('../utils/payment')(request);
 
 class PaymentService{
     startPayment(data) {
@@ -78,6 +78,19 @@ class PaymentService{
     listBanks() {
         return new Promise((resolve, reject) => {
             getBanks((error, body) => {
+                if (error) {
+                    reject(error.message);
+                }
+                const response = JSON.parse(body);
+                return resolve(response.data);
+            });
+        });
+    }
+
+    // get user account details
+    AccountDetails(accountNumber, bankCode) {
+        return new Promise((resolve, reject) => {
+            getAccountDetails(accountNumber, bankCode, (error, body) => {
                 if (error) {
                     reject(error.message);
                 }
