@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { uploadVendorFiles, uploadFile } = require("../middlewares/uploadFile");
+const { uploadVendorFiles, uploadFile, uploadVendorFilesToCloudinary } = require("../middlewares/uploadFile");
 const vendorController = require("../controllers/vendor");
 const {
   verifyTokenAndAdmin,
@@ -9,7 +9,7 @@ const {
 } = require("../controllers/verifyToken");
 
 // Create Vendor
-router.post("/", uploadVendorFiles, vendorController.createVendor);
+router.post("/", uploadVendorFiles, uploadVendorFilesToCloudinary,  vendorController.createVendor);
 
 // login vendor
 router.post("/login", vendorController.loginVendor);
