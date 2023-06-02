@@ -71,34 +71,19 @@ exports.createVendor = async (req, res) => {
   }
 
   // Get the uploaded file information
-  const IDFile =
-    req.files && req.files.IDFile && req.files.IDFile[0].filename
-      ? req.files.IDFile[0].filename
-      : "";
-  const CACCertificateFile =
-    req.files &&
-    req.files.CACCertificateFile &&
-    req.files.CACCertificateFile[0].filename
-      ? req.files.CACCertificateFile[0].filename
-      : "";
-  const TINCertificateFile =
-    req.files &&
-    req.files.TINCertificateFile &&
-    req.files.TINCertificateFile[0].filename
-      ? req.files.TINCertificateFile[0].filename
-      : "";
-  const profilePhoto =
-    req.files && req.files.profilePhoto && req.files.profilePhoto[0].filename
-      ? req.files.profilePhoto[0].filename
-      : "";
+  const IDFile = req.body.vendorFiles.IDFile || "";
+  const CACCertificateFile = req.body.vendorFiles.CACCertificateFile || "";
+  const TINCertificateFile = req.body.vendorFiles.TINCertificateFile || "";
+  const profilePhoto = req.body.vendorFiles.profilePhoto || "";
+
 
   // Update the businessInformation with the file information
   req.body.businessInformation.IDFile = IDFile;
   req.body.businessInformation.CACCertificateFile = CACCertificateFile;
   req.body.businessInformation.TINCertificateFile = TINCertificateFile;
 
-  // Update the profilePhoto with the file information
-  req.body.profilePhoto = profilePhoto;
+  // // Update the profilePhoto with the file information
+  // req.body.profilePhoto = profilePhoto;
 
   // Encrypt password using bcrypt
   const password = req.body.sellerAccountInformation.password;
@@ -112,13 +97,17 @@ exports.createVendor = async (req, res) => {
     businessInformation: req.body.businessInformation,
     vendorBankAccount: req.body.vendorBankAccount,
     storeStatus: req.body.storeStatus || "pending",
-    profilePhoto: req.body.profilePhoto,
+    profilePhoto: profilePhoto,
   });
 
   try {
     // Save the vendor in the database
     const data = await vendor.save();
-    res.send(data);
+     // Exclude the password from the returned payload
+     const responseData = data.toObject();
+     delete responseData.sellerAccountInformation.password;
+
+    res.send(responseData);
   } catch (err) {
     res.status(500).send({
       message: err.message || "Some error occurred while creating the vendor.",
