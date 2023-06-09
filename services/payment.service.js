@@ -34,6 +34,7 @@ class PaymentService{
 
     createPayment(req){
         const ref = req.reference;
+        console.log(req);
         if(ref==null){
             return reject({ code: 400, msg: 'No reference passed in query!' });
         }
@@ -47,9 +48,9 @@ class PaymentService{
                     const response = JSON.parse(body);
 
                     const{ reference, amount, status} = response.data;
-                    const{email} = response.data.customer;
+                    const{email, order } = response.data.customer;
                     const full_name = response.data.metadata.full_name;
-                    const newPayment = {reference, amount, email, full_name, status}
+                    const newPayment = {reference, amount, email, full_name, status, order}
                     const payment = Payment.create(newPayment);
 
                     return resolve(payment)

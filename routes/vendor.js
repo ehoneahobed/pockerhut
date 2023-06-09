@@ -15,12 +15,11 @@ router.post("/", uploadVendorFiles, uploadVendorFilesToCloudinary,  vendorContro
 router.post("/login", vendorController.loginVendor);
 
 // Update Vendor
-router.put("/:vendorId", vendorController.updateVendor);
+router.put("/:vendorId", uploadVendorFiles, uploadVendorFilesToCloudinary, vendorController.updateVendor);
 
 // Delete Vendor
 router.delete(
   "/:id",
-  verifyTokenAndAuthorization,
   vendorController.deleteVendor
 );
 
