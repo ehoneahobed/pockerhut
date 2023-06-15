@@ -27,6 +27,9 @@ const categorySchema = new mongoose.Schema(
     },
     description: {
       type: String
+    },
+    featuredImage: {
+      type: String
     }
   },
   { timestamps: true }
