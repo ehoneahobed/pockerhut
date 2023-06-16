@@ -184,6 +184,49 @@ exports.loginVendor = async (req, res) => {
 };
 
 // Update Vendor
+// exports.updateVendor = async (req, res) => {
+//   // Validate the request
+//   if (
+//     !req.body.sellerAccountInformation ||
+//     !req.body.businessInformation ||
+//     !req.body.vendorBankAccount
+//   ) {
+//     return res.status(400).send({
+//       message:
+//         "Seller account information, business information and vendor bank account are required",
+//     });
+//   }
+
+//   // Find the vendor and update it with the request body
+//   try {
+//     const vendor = await Vendor.findByIdAndUpdate(
+//       req.params.vendorId,
+//       {
+//         sellerAccountInformation: req.body.sellerAccountInformation,
+//         businessInformation: req.body.businessInformation,
+//         vendorBankAccount: req.body.vendorBankAccount,
+//         storeStatus: req.body.storeStatus || "pending",
+//       },
+//       { new: true }
+//     );
+//     if (!vendor) {
+//       return res.status(404).send({
+//         message: "Vendor not found with id " + req.params.vendorId,
+//       });
+//     }
+//     res.send(vendor);
+//   } catch (err) {
+//     if (err.kind === "ObjectId") {
+//       return res.status(404).send({
+//         message: "Vendor not found with id " + req.params.vendorId,
+//       });
+//     }
+//     return res.status(500).send({
+//       message: "Error updating vendor with id " + req.params.vendorId,
+//     });
+//   }
+// };
+
 exports.updateVendor = async (req, res) => {
   // Validate the request
   if (
@@ -193,8 +236,27 @@ exports.updateVendor = async (req, res) => {
   ) {
     return res.status(400).send({
       message:
-        "Seller account information, business information and vendor bank account are required",
+        "Seller account information, business information, and vendor bank account are required",
     });
+  }
+
+  // Get the uploaded file information
+  const IDFile = req.body.vendorFiles.IDFile || "";
+  const CACCertificateFile = req.body.vendorFiles.CACCertificateFile || "";
+  const TINCertificateFile = req.body.vendorFiles.TINCertificateFile || "";
+  const profilePhoto = req.body.vendorFiles.profilePhoto || "";
+
+  // Update the businessInformation with the file information
+  req.body.businessInformation.IDFile = IDFile;
+  req.body.businessInformation.CACCertificateFile = CACCertificateFile;
+  req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+
+  // Encrypt password using bcrypt
+  if (req.body.sellerAccountInformation.password) {
+    const password = req.body.sellerAccountInformation.password;
+    const salt = await bcrypt.genSalt(saltRounds);
+    const encryptedPassword = await bcrypt.hash(password, salt);
+    req.body.sellerAccountInformation.password = encryptedPassword;
   }
 
   // Find the vendor and update it with the request body
@@ -206,6 +268,7 @@ exports.updateVendor = async (req, res) => {
         businessInformation: req.body.businessInformation,
         vendorBankAccount: req.body.vendorBankAccount,
         storeStatus: req.body.storeStatus || "pending",
+        profilePhoto: profilePhoto,
       },
       { new: true }
     );
@@ -214,7 +277,12 @@ exports.updateVendor = async (req, res) => {
         message: "Vendor not found with id " + req.params.vendorId,
       });
     }
-    res.send(vendor);
+
+    // Exclude the password from the returned payload
+    const responseData = vendor.toObject();
+    delete responseData.sellerAccountInformation.password;
+
+    res.send(responseData);
   } catch (err) {
     if (err.kind === "ObjectId") {
       return res.status(404).send({
@@ -227,16 +295,94 @@ exports.updateVendor = async (req, res) => {
   }
 };
 
+
 // delete vendor
+// exports.deleteVendor = async (req, res) => {
+//   try {
+//     const vendor = await Vendor.findByIdAndDelete(req.params.id);
+//     if (!vendor) return res.status(404).send("Vendor not found");
+//     res.status(200).send("Vendor deleted successfully");
+//   } catch (error) {
+//     res.status(500).send(error.message);
+//   }
+// };
+
+
+const cloudinary = require('../utils/cloudinary');
+
+// Delete Vendor
 exports.deleteVendor = async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
     if (!vendor) return res.status(404).send("Vendor not found");
+
+    // Extract the public IDs from the URLs
+    const publicIds = [];
+    if (vendor.profilePhoto) {
+      const profilePhotoPublicId = extractPublicId(vendor.profilePhoto);
+      if (profilePhotoPublicId) publicIds.push(profilePhotoPublicId);
+    }
+    if (vendor.businessInformation) {
+      const { IDFile, CACCertificateFile, TINCertificateFile } = vendor.businessInformation;
+      if (IDFile) {
+        const IDFilePublicId = extractPublicId(IDFile);
+        if (IDFilePublicId) publicIds.push(IDFilePublicId);
+      }
+      if (CACCertificateFile) {
+        const CACCertificateFilePublicId = extractPublicId(CACCertificateFile);
+        if (CACCertificateFilePublicId) publicIds.push(CACCertificateFilePublicId);
+      }
+      if (TINCertificateFile) {
+        const TINCertificateFilePublicId = extractPublicId(TINCertificateFile);
+        if (TINCertificateFilePublicId) publicIds.push(TINCertificateFilePublicId);
+      }
+    }
+
+    // Delete the associated files in Cloudinary
+    // if (publicIds.length > 0) {
+    //   await Promise.all(
+    //     publicIds.map(async (publicId) => {
+    //       await cloudinary.uploader.destroy(publicId);
+    //     })
+    //   );
+    // }
+
+    if (publicIds.length > 0) {
+      await Promise.all(
+        publicIds.map((publicId) =>
+          new Promise((resolve, reject) => {
+            cloudinary.uploader.destroy(publicId, (error, result) => {
+              if (error) {
+                reject(error);
+                console.log(error);
+              } else {
+                resolve(result);
+                console.log(result);
+              }
+            });
+          })
+        )
+      );
+    }
+
+    console.log(publicIds);
+
     res.status(200).send("Vendor deleted successfully");
   } catch (error) {
     res.status(500).send(error.message);
   }
 };
+
+// Function to extract the public ID from the Cloudinary URL
+function extractPublicId(url) {
+  const regex = /\/v\d+\/(.+)$/i;
+  const matches = url.match(regex);
+  if (matches && matches.length >= 2) {
+    return matches[1];
+  }
+  return null;
+}
+
 
 // get a vendor
 exports.getVendor = async (req, res) => {

@@ -5,12 +5,13 @@ const { Category, Subcategory } = require('../models/Categories');
 // Create a new category
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, featuredImage } = req.body;
 
     // Create a new category
     const category = new Category({
       name,
       description,
+      featuredImage,
     });
 
     // Save the category to the database

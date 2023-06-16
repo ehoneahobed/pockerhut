@@ -20,6 +20,7 @@ const VendorSchema = new Schema({
     address1: { type: String, required: true },
     address2: String,
     city: { type: String, required: true },
+    country: { type: String},
     businessOwnerName: { type: String },
     dateOfBirth: { type: String },
     IDType: { type: String },
@@ -27,6 +28,7 @@ const VendorSchema = new Schema({
     CACRegistrationNumber: { type: String },
     CACCertificateFile: { type: String },
     TINCertificateFile: { type: String },
+    TINRegistrationNumber: { type: String },
     VATRegistered: { type: String },
   },
   storeStatus: {

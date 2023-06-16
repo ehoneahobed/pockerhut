@@ -1,3 +1,4 @@
+const { uploadImage, uploadSingleImage, uploadToCloudinary, uploadLoadedImage } = require("../middlewares/uploadFile");
 const router = require("express").Router();
 const {
   verifyTokenAndAdmin,
@@ -21,7 +22,7 @@ const {
 // CATEGORIES
 
 // Create a new category
-router.post("/categories", verifyTokenAndAdmin, createCategory);
+router.post("/categories", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, createCategory);
 
 // Update a category
 router.put("/categories/:id", verifyTokenAndAdmin, updateCategory);
