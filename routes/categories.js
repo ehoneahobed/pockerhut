@@ -22,36 +22,19 @@ const {
 // CATEGORIES
 
 // Create a new category
-router.post("/categories", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, createCategory);
+router.post("/", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, createCategory);
 
 // Update a category
-router.put("/categories/:id", verifyTokenAndAdmin, updateCategory);
+router.put("/:id", verifyTokenAndAdmin, updateCategory);
 
 // Delete a category
-router.delete("/categories/:id", verifyTokenAndAdmin, deleteCategory);
+router.delete("/:id", verifyTokenAndAdmin, deleteCategory);
 
 // Get a single category
-router.get("/categories/:id", getCategory);
+router.get("/:id", getCategory);
 
 // Get all categories
-router.get("/categories", getCategories);
+router.get("/", getCategories);
 
-
-// SUBCATEGORIES
-
-// Create a new subcategory
-router.post("/subcategories", verifyTokenAndAdmin, createSubcategory);
-
-// Update a subcategory
-router.put("/subcategories/:id", verifyTokenAndAdmin, updateSubcategory);
-
-// Delete a subcategory
-router.delete("/subcategories/:id", verifyTokenAndAdmin, deleteSubcategory);
-
-// Get a single subcategory 
-router.get("/subcategories/:id", getSubcategory);
-
-// Get all subcategories
-router.get("/subcategories", getSubcategories);
 
 module.exports = router;
