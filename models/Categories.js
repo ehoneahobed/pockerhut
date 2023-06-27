@@ -19,6 +19,22 @@ const subcategorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// const categorySchema = new mongoose.Schema(
+//   {
+//     name: {
+//       type: String,
+//       required: true
+//     },
+//     description: {
+//       type: String
+//     },
+//     featuredImage: {
+//       type: String
+//     }
+//   },
+//   { timestamps: true }
+// );
+
 const categorySchema = new mongoose.Schema(
   {
     name: {
@@ -30,10 +46,17 @@ const categorySchema = new mongoose.Schema(
     },
     featuredImage: {
       type: String
-    }
+    },
+    subcategories: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subcategory"
+      }
+    ]
   },
   { timestamps: true }
 );
+
 
 const Category = mongoose.model("Category", categorySchema);
 const Subcategory = mongoose.model("Subcategory", subcategorySchema);
