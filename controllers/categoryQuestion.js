@@ -11,13 +11,14 @@ exports.createCategoryQuestions = async (req, res) => {
 
         // Iterate over the questions array and create category questions
         for (const questionData of questions) {
-            const { question, required } = questionData;
+            const { question, required, questionHint } = questionData;
 
             // create a new category question
             const categoryQuestion = new CategoryQuestion ({
                 category: categoryId,
                 question,
                 required,
+                questionHint
             });
 
             // Add the category question to the array
@@ -37,7 +38,7 @@ exports.createCategoryQuestions = async (req, res) => {
 exports.updateCategoryQuestion = async (req, res) => {
     try {
       const questionId = req.params.id;
-      const { question, required } = req.body;
+      const { question, required, questionHint } = req.body;
   
       // Find the category question by ID
       const categoryQuestion = await CategoryQuestion.findById(questionId);
@@ -49,6 +50,7 @@ exports.updateCategoryQuestion = async (req, res) => {
       // Update the category question properties
       categoryQuestion.question = question;
       categoryQuestion.required = required;
+      categoryQuestion.questionHint = questionHint;
   
       // Save the updated category question to the database
       const updatedCategoryQuestion = await categoryQuestion.save();
@@ -104,4 +106,15 @@ exports.getCategoryQuestions = async (req, res) => {
       res.status(500).json(error);
     }
   };
-  
+
+// Get all category questions
+exports.getAllCategoryQuestions = async (req, res) => {
+  try {
+    // Find all category questions
+    const categoryQuestions = await CategoryQuestion.find();
+
+    res.status(200).json(categoryQuestions);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+};
