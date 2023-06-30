@@ -13,7 +13,11 @@ const categoryQuestionSchema = new mongoose.Schema({
   required: {
     type: Boolean,
     required: true,
+  },
+  questionHint: {
+    type: String
   }
+
 });
 
 module.exports = mongoose.model("CategoryQuestion", categoryQuestionSchema);

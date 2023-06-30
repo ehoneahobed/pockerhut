@@ -7,20 +7,18 @@ exports.createProduct = async (req, res) => {
     try {
       // Validate the request
       if (
-        !req.body.category ||
         !req.body.information ||
         !req.body.details ||
         !req.body.pricing
       ) {
         return res.status(400).send({
           message:
-            "Product information, category, product details, and pricing details are all required",
+            "Product information, product details, and pricing details are all required",
         });
       }
   
       // Create a new product
       const product = new Product({
-        category: req.body.category,
         information: req.body.information,
         details: req.body.details,
         pricing: req.body.pricing,
@@ -116,7 +114,6 @@ exports.updateApprovalStatus = async (req, res) => {
 exports.updateProduct = async (req, res) => {
     try {
         const updates = {};
-        if (req.body.category) updates.category = req.body.category;
         if (req.body.information) updates.information = req.body.information;
         if (req.body.details) updates.details = req.body.details;
         if (req.body.pricing) updates.pricing = req.body.pricing;
@@ -165,15 +162,43 @@ exports.deleteProduct = async (req, res) => {
     }
 };
 
+// // get a single product
+// exports.getProduct = async (req, res) => {
+//     try {
+//         const product = await Product.findById(req.params.productId).populate();
+//         if (!product) {
+//             return res.status(404).send({
+//                 message: "Product not found with id " + req.params.productId
+//             });
+//         }
+//         res.send(product);
+//     } catch (err) {
+//         if (err.kind === "ObjectId") {
+//             return res.status(404).send({
+//                 message: "Product not found with id " + req.params.productId
+//             });
+//         }
+//         return res.status(500).send({
+//             message: "Error retrieving product with id " + req.params.productId
+//         });
+//     }
+// };
+
 // get a single product
 exports.getProduct = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.productId);
+        const product = await Product.findById(req.params.productId)
+            .populate('information.category', 'name') // Populate the category field and select only the name field
+            .populate('information.subcategory', 'name') // Populate the subcategory field and select only the name field
+            .populate('reviews') // Populate the reviews field
+            .populate('information.categoryQuestions.question', 'question'); // Populate the categoryQuestions.question field and select only the question field
+
         if (!product) {
             return res.status(404).send({
                 message: "Product not found with id " + req.params.productId
             });
         }
+
         res.send(product);
     } catch (err) {
         if (err.kind === "ObjectId") {
@@ -186,6 +211,7 @@ exports.getProduct = async (req, res) => {
         });
     }
 };
+
 
 
 

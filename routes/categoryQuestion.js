@@ -7,7 +7,8 @@ const {
 } = require('../controllers/verifyToken');
 
 // Create new category questions
-router.post('/', verifyTokenAndAdmin, categoryQuestionController.createCategoryQuestions);
+// router.post('/', verifyTokenAndAdmin, categoryQuestionController.createCategoryQuestions);
+router.post('/', categoryQuestionController.createCategoryQuestions);
 
 // Update a category question
 router.put('/:id', verifyTokenAndAdmin, categoryQuestionController.updateCategoryQuestion);
@@ -20,5 +21,8 @@ router.get('/:id', categoryQuestionController.getCategoryQuestion);
 
 // Get all category questions for a given category
 router.get('/category/:categoryId', categoryQuestionController.getCategoryQuestions);
+
+// Get all category questions
+router.get('/', categoryQuestionController.getAllCategoryQuestions);
 
 module.exports = router;
