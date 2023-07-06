@@ -3,6 +3,7 @@ const router = express.Router();
 const vetController = require('../controllers/vets');
 
 const { productImageUpload } = require("../middlewares/uploadFile");
+const { uploadVetFiles, uploadVetFilesToCloudinary } = require("../middlewares/uploadFile");
 
 const {
     verifyTokenAndAdmin,
@@ -10,7 +11,8 @@ const {
     verifyToken,
   } = require("../controllers/verifyToken");
 
-router.post('/', verifyTokenAndAuthorization, productImageUpload, vetController.createVet);
+// router.post('/', verifyTokenAndAuthorization, productImageUpload, vetController.createVet);
+router.post('/', uploadVetFiles, uploadVetFilesToCloudinary, vetController.createVet);
 router.get('/', verifyTokenAndAuthorization, vetController.getVets);
 router.get('/:id', verifyTokenAndAuthorization, vetController.getVet);
 router.put('/:id', verifyTokenAndAuthorization, productImageUpload, vetController.updateVet);

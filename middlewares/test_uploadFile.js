@@ -54,6 +54,55 @@ exports.uploadLoadedImage = async (req, res, next) => {
 
 
 // ********* START OF DIRECT UPLOAD TO CLOUDINARY THROUGH MEMORY *****
+
+// upload single image to cloudinary
+// const imageStorage = new CloudinaryStorage({
+//   cloudinary: cloudinary,
+//   params: {
+//     folder: "porkerhut",
+//     allowed_formats: ["jpg", "jpeg", "png", "svg"]
+//   },
+// });
+
+// const imageUpload = multer({ storage: imageStorage  });
+
+// exports.uploadSingleImage = imageUpload.single("featuredImage");
+
+// // Middleware to upload the image to Cloudinary
+// exports.uploadToCloudinary = async (req, res, next) => {
+//   try {
+//     // check if there is a file uploaded by Multer
+//     if (!req.file) {
+//       throw new Error("No file uploaded");
+//     }
+
+//     console.log(req.file);
+
+//     // Upload the file to Cloudinary
+//     const result = await cloudinary.uploader.upload_stream(
+//       {
+//         folder: "porkerhut",
+//         allowed_formats: ["jpg", "jpeg", "png", "svg"]
+//       },
+//       (error, result) => {
+//         if (error) {
+//           throw new Error(error);
+//         }
+
+//         console.log(result);
+
+//         // Add the Cloudinary URL to the request body
+//         req.body.cloudinaryUrl = result.secure_url;
+//         next();
+//       }
+//     ).end(req.file.buffer);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+
 // Configure Multer to store files in memory
 const imageStorage = multer.memoryStorage();
 
@@ -104,6 +153,30 @@ exports.uploadToCloudinary = async (req, res, next) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ****************** END OF UPLOAD TO CLOUDINARY DIRECTLY **************
 
@@ -165,8 +238,54 @@ const uploadFile = multer({
 
 exports.uploadFile = uploadFile.single("file");
 
+// upload 4 different files during creation of vendor account
+// const vendorStorage = multer.diskStorage({
+//     destination: function(req, file, cb) {
+//       const dir = 'uploads/vendor';
+//       if (!fs.existsSync(dir)) {
+//         fs.mkdirSync(dir);
+//       }
+//       cb(null, dir);
+//     },
+//     filename: function(req, file, cb) {
+//       cb(null, new Date().toISOString() + file.originalname);
+//     }
+//   });
+
+// const vendorFileFilter = (req, file, cb) => {
+//   if (
+//     file.mimetype === "image/jpeg" ||
+//     file.mimetype === "image/jpg" ||
+//     file.mimetype === "image/png" ||
+//     file.mimetype === "application/pdf" ||
+//     file.mimetype ===
+//       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+//   ) {
+//     cb(null, true);
+//   } else {
+//     cb(null, false);
+//   }
+// };
+
+// const uploadVendorFiles = multer({
+//   storage: vendorStorage,
+//   fileFilter: vendorFileFilter,
+//   limits: {
+//     fileSize: 1024 * 1024 * 5,
+//   },
+// });
+
+// exports.uploadVendorFiles = uploadVendorFiles.fields([
+//   { name: "IDFile", maxCount: 1 },
+//   { name: "CACCertificateFile", maxCount: 1 },
+//   { name: "TINCertificateFile", maxCount: 1 },
+//   { name: "profilePhoto", maxCount: 1 },
+// ]);
+
+
 
 // ******* UPLOAD MULTIPLE IMAGES TO CLOUDINARY ***********************
+
 
 const cloudinaryStorage = new CloudinaryStorage({
   cloudinary,
@@ -232,6 +351,53 @@ exports.uploadMultiToCloudinary = async (req, res, next) => {
 
 
 // *** UPLOAD files/images for vendor registration
+
+
+// const vendorStorage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, "uploads/vendor");
+//   },
+//   filename: function (req, file, cb) {
+//     oldFileName = file.originalname.trim();
+//     // console.log(oldFileName);
+//     cb(null, Date.now() + "-" + oldFileName.replace(/\s+/g, "_"));
+//   },
+// });
+
+// const vendorFileFilter = (req, file, cb) => {
+//   if (
+//     file.mimetype === "image/jpeg" ||
+//     file.mimetype === "image/png" ||
+//     file.mimetype === "application/pdf" ||
+//     file.mimetype === "application/msword" ||
+//     file.mimetype ===
+//       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+//   ) {
+//     cb(null, true);
+//   } else {
+//     cb(
+//       new Error(
+//         "Invalid file type, only JPEG, PNG, PDF, and Word files are allowed"
+//       ),
+//       false
+//     );
+//   }
+// };
+
+// exports.uploadVendorFiles = multer({
+//   storage: vendorStorage,
+//   fileFilter: vendorFileFilter,
+//   limits: {
+//     fileSize: 1024 * 1024 * 5,
+//   },
+// }).fields([
+//   { name: "IDFile", maxCount: 1 },
+//   { name: "CACCertificateFile", maxCount: 1 },
+//   { name: "TINCertificateFile", maxCount: 1 },
+//   { name: "profilePhoto", maxCount: 1 },
+// ]);
+
+
 
 const vendorStorage = new CloudinaryStorage({
   cloudinary,
@@ -310,6 +476,12 @@ exports.uploadVendorFilesToCloudinary = async (req, res, next) => {
 };
 
 
+
+
+
+
+
+
 // *** UPLOAD files/images for vet registration
 
 const vetStorage = new CloudinaryStorage({
@@ -344,7 +516,7 @@ const vetFileUpload = multer({
   },
 }).fields([
   { name: "vetLicense", maxCount: 1 },
-  { name: "additionalDocuments", maxCount: 5 }, // Update the maxCount value as per your requirements
+  { name: "additionalDocuments", maxCount: 4 },
 ]);
 
 exports.uploadVetFiles = vetFileUpload;
@@ -361,24 +533,14 @@ exports.uploadVetFilesToCloudinary = async (req, res, next) => {
     // Upload all files to Cloudinary in parallel
     await Promise.all(
       Object.keys(req.files).map(async (fieldName) => {
-        const files = req.files[fieldName];
-        if (files.length === 0) {
-          console.log(`${fieldName} - No files uploaded`);
+        const file = req.files[fieldName][0];
+        if (file.size === 0) {
+          console.log(`${file.filename} File is empty`);
           return;
         }
 
-        const fileUrls = [];
-        for (const file of files) {
-          if (file.size === 0) {
-            console.log(`${file.filename} File is empty`);
-            continue;
-          }
-
-          const result = await cloudinary.uploader.upload_stream(file.buffer);
-          fileUrls.push(file.path);
-        }
-
-        urls[fieldName] = fileUrls;
+        const result = await cloudinary.uploader.upload_stream(file.buffer);
+        urls[fieldName] = file.path;
       })
     );
 
@@ -386,7 +548,7 @@ exports.uploadVetFilesToCloudinary = async (req, res, next) => {
     req.body.vetFiles = urls;
 
     next();
-  } catch (error) {
+ } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };

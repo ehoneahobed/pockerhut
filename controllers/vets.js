@@ -9,19 +9,39 @@ const Vet = require('../models/Vets');
 //   }
 // };
 
+// exports.createVet = async (req, res) => {
+//   try {
+//     // console.log('Getting here');
+//     console.log(req.body.vetFiles);
+//     let additionalDocuments = [];
+//     if (req.files && req.files.length > 0) {
+//       additionalDocuments = req.files.map((file) => file.filename);
+//     }
+//     const vet = await Vet.create({
+//       ...req.body,
+//       additionalDocuments
+//     });
+//     return res.status(201).json({status: "success", data: vet});
+//   } catch (error) {
+//     return res.status(500).json({status: "failed", message: 'Internal server error' });
+//   }
+// };
+
 exports.createVet = async (req, res) => {
   try {
-    let additionalDocuments = [];
-    if (req.files && req.files.length > 0) {
-      additionalDocuments = req.files.map((file) => file.filename);
-    }
+    const { vetLicense, additionalDocuments } = req.body.vetFiles;
+
     const vet = await Vet.create({
       ...req.body,
-      additionalDocuments
+      vetLicense: vetLicense[0], 
+      additionalDocuments,
     });
-    return res.status(201).json({status: "success", data: vet});
+
+    return res.status(201).json({ status: "success", data: vet });
   } catch (error) {
-    return res.status(500).json({status: "failed", message: 'Internal server error' });
+    return res
+      .status(500)
+      .json({ status: "failed", message: error.message });
   }
 };
 

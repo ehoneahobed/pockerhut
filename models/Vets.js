@@ -3,53 +3,56 @@ const mongoose = require('mongoose');
 const vetsSchema = new mongoose.Schema({
   accountName: {
     type: String,
-    required: true
+    required:[true,"Problem with accountName"]
   },
   businessName: {
     type: String,
-    required: true
+    required:[true,"Problem with businessName"]
   },
   businessAddress: {
     type: String,
-    required: true
+    required:[true,"Problem with businessAddress"]
   },
   companyRcNumber: {
-    type: String
+    type: String,
   },
   email: {
     type: String,
-    required: true,
+    required:[true,"Problem with email"],
     unique: true
   },
   state: {
     type: String,
-    required: true
+    required:[true,"Problem with state"]
   },
   phone: {
     type: String,
+    required:[true,"Problem with phone"]
   },
   city: {
     type: String,
+    required:[true,"Problem with city"]
   },
   vetType: {
-    type: String
+    type: String,
+    required:[true,"Problem with vetType"]
   },
   yearsOfOperation: {
-    type: Number
+    type: Number,
+    required:[true,"Problem with yearsOfOperation"]
   },
   vetLicense: {
-    type: String
+    type: String,
+    required:[true,"Problem with vetLicense"]
   },
   additionalDocuments: [{
-    type: String
+    type: String,
   }],
   aboutYou: {
     type: String,
-    required: true
   },
   status: {
     type: String,
-    required: true,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   }
