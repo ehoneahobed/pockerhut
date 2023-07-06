@@ -20,10 +20,16 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    billing_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Billing",
-    },
+    // billing_id: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Billing",
+    // },
+    billingInfo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Billing",
+      }
+    ],
     isAdmin: {
       type: Boolean,
       default: false,

@@ -100,8 +100,7 @@ const OrderSchema = new Schema({
         ref: "Vendor",
       },
       deliveryFeePerProduct: {
-        type: Number,
-        required: true,
+        type: Number
       },
     },
   ],
@@ -125,6 +124,10 @@ const OrderSchema = new Schema({
     enum: ["pending", "readyToGo", "fulfilled", "failed", "completed"],
     default: "pending",
   },
+  isPaid: {
+    type: Boolean,
+    default: false
+  }
 });
 
 const Order = mongoose.model("Order", OrderSchema);

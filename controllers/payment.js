@@ -13,8 +13,11 @@ exports.startPayment = async (req, res) => {
 
 exports.createPayment = async (req, res) => {
     try{
+        console.log(`Query: ${req.query}`);
+        console.log(`Req Body: ${req.body}`);
         const response = await paymentInstance.createPayment(req.query);
         res.status(201).json({status: "Success", data : response});
+        // full_name not being passed
     }catch(error){
         res.status(500).json({status: "Failed", message : error.message});
     }

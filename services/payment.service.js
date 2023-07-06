@@ -26,7 +26,7 @@ class PaymentService{
                 });
 
             } catch(error){
-                error.source = 'Start Payement Service';
+                error.source = 'Start Payment Service';
                 return reject(error);
             }
         })
@@ -46,10 +46,14 @@ class PaymentService{
                         reject(error.message)
                     }
                     const response = JSON.parse(body);
-
                     const{ reference, amount, status} = response.data;
                     const{email, order } = response.data.customer;
                     const full_name = response.data.metadata.full_name;
+                    console.log(`full_name: ${full_name}`);
+                    console.log(`email: ${email}`);
+                    console.log(`order: ${order}`);
+                    console.log(`amount: ${amount}`);
+                    console.log(`status: ${status}`);
                     const newPayment = {reference, amount, email, full_name, status, order}
                     const payment = Payment.create(newPayment);
 

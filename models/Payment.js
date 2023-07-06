@@ -2,8 +2,7 @@ const mongoose = require('mongoose')
 
 const paymentSchema = new mongoose.Schema({
     full_name : {
-        type: String,
-        required: true
+        type: String
     },
     email: {
         type: String,
@@ -32,4 +31,4 @@ const paymentSchema = new mongoose.Schema({
     timestamps: true
 })
 
-module.exports =  mongoose.model('PaymentModel', paymentSchema);
+module.exports =  mongoose.model('Payment', paymentSchema);
