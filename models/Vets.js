@@ -15,7 +15,6 @@ const vetsSchema = new mongoose.Schema({
   },
   companyRcNumber: {
     type: String,
-    required:[true,"Problem with companyRcNumber"]
   },
   email: {
     type: String,
@@ -48,15 +47,12 @@ const vetsSchema = new mongoose.Schema({
   },
   additionalDocuments: [{
     type: String,
-    required:[true,"Problem with additionalDocuments"]
   }],
   aboutYou: {
     type: String,
-    required:[true,"Problem with aboutYou"]
   },
   status: {
     type: String,
-    required:[true,"Problem with status"],
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   }
