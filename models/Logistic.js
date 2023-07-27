@@ -20,6 +20,7 @@ const logisticsSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
+    unique: [true, "Sorry, this email already exists"]
   },
   state: {
     type: String,

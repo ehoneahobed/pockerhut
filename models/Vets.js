@@ -18,8 +18,8 @@ const vetsSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required:[true,"Problem with email"],
-    unique: true
+    required:[true,"Email is required"],
+    unique: [true, "Sorry, this email already exists"]
   },
   state: {
     type: String,

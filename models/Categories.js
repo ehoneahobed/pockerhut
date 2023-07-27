@@ -45,7 +45,8 @@ const categorySchema = new mongoose.Schema(
       type: String
     },
     featuredImage: {
-      type: String
+      type: String,
+      required: true
     },
     subcategories: [
       {
