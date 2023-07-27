@@ -8,7 +8,7 @@ const productInformationSchema = new mongoose.Schema({
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Category",
-    required: true,
+    required: [true, 'category is required. Please provide the category ID'],
   },
   subcategory: {
     type: mongoose.Schema.Types.ObjectId,
@@ -108,6 +108,7 @@ const productSchema = new mongoose.Schema(
     vendor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vendor",
+      required: true
     },
   },
   { timestamps: true }
