@@ -88,8 +88,14 @@ const productSchema = new mongoose.Schema(
       },
     ],
     approvalStatus: {
-      type: Boolean,
-      default: false,
+      type: String,
+      enum: ['pending', 'rejected', 'approved'],
+      default: 'pending',
+    },
+    visibilityStatus: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'inactive',
     },
     featured: {
       type: Boolean,

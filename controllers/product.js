@@ -3,39 +3,104 @@ const Category = require('../models/Categories');
 // const Review = require("../models/");
 
 // Create a new product
+// exports.createProduct = async (req, res) => {
+//     try {
+//       // Validate the request
+//       if (
+//         !req.body.information ||
+//         !req.body.details ||
+//         !req.body.pricing
+//       ) {
+//         return res.status(400).send({
+//           message:
+//             "Product information, product details, and pricing details are all required",
+//         });
+//       }
+  
+//       // Create a new product
+//       const product = new Product({
+//         information: req.body.information,
+//         details: req.body.details,
+//         pricing: req.body.pricing,
+//         images: req.body.productImages || [],
+//         productReviews: [],
+//       });
+  
+//       // Save the product in the database
+//       const savedProduct = await product.save();
+  
+//       res.send(savedProduct);
+//     } catch (err) {
+//       res.status(500).send({
+//         message: err.message || "Some error occurred while creating the product.",
+//       });
+//     }
+//   };
+
 exports.createProduct = async (req, res) => {
-    try {
-      // Validate the request
-      if (
-        !req.body.information ||
-        !req.body.details ||
-        !req.body.pricing
-      ) {
-        return res.status(400).send({
-          message:
-            "Product information, product details, and pricing details are all required",
-        });
+  try {
+    // Extract data from the request body using square bracket notation
+    const {
+      information,
+      details,
+      pricing,
+      images,
+      approvalStatus,
+      visibilityStatus,
+      featured,
+      avgRating,
+    } = req.body;
+
+    // Create an array to store the formatted category questions
+    const formattedCategoryQuestions = information.categoryQuestions.map(
+      (questionData) => {
+        const { question, answer } = questionData;
+        return { question, answer };
       }
-  
-      // Create a new product
-      const product = new Product({
-        information: req.body.information,
-        details: req.body.details,
-        pricing: req.body.pricing,
-        images: req.body.productImages || [],
-        productReviews: [],
-      });
-  
-      // Save the product in the database
-      const savedProduct = await product.save();
-  
-      res.send(savedProduct);
-    } catch (err) {
-      res.status(500).send({
-        message: err.message || "Some error occurred while creating the product.",
-      });
-    }
-  };
+    );
+
+    // Create a new product
+    const product = new Product({
+      information: {
+        productName: information.productName,
+        category: information.category,
+        subcategory: information.subcategory,
+        categoryQuestions: formattedCategoryQuestions,
+      },
+      details: {
+        productWeight: details.productWeight,
+        productContent: details.productContent,
+        cookingMethod: details.cookingMethod,
+        nutritionalValue: details.nutritionalValue,
+        deliveryDetails: details.deliveryDetails,
+        productDescription: details.productDescription,
+      },
+      pricing: {
+        saleStartDate: pricing.saleStartDate,
+        saleEndDate: pricing.saleEndDate,
+        productPrice: pricing.productPrice,
+        quantity: pricing.quantity,
+      },
+      images,
+      approvalStatus,
+      visibilityStatus,
+      featured,
+      avgRating,
+      reviews: [],
+      vendor: req.body.vendorId,
+    });
+
+    // Save the product in the database
+    const savedProduct = await product.save();
+
+    res.send(savedProduct);
+  } catch (err) {
+    res.status(500).send({
+      message: err.message || "Some error occurred while creating the product.",
+    });
+  }
+};
+
   
 
 
@@ -216,9 +281,21 @@ exports.getProduct = async (req, res) => {
 
 
 // get all the products
+// exports.getAllProducts = async (req, res) => {
+//     try {
+//         const products = await Product.find();
+//         res.send(products);
+//     } catch (err) {
+//         res.status(500).send({
+//             message: "Error retrieving products"
+//         });
+//     }
+// };
+
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Product.find();
+        // Populate the 'vendor' field with vendor details
+        const products = await Product.find().populate('vendor');
         res.send(products);
     } catch (err) {
         res.status(500).send({
@@ -227,11 +304,10 @@ exports.getAllProducts = async (req, res) => {
     }
 };
 
-
 // get all approved products
 exports.getApprovedProducts = async (req, res) => {
     try {
-        const approvedProducts = await Product.find({ approvalStatus: true });
+        const approvedProducts = await Product.find({ approvalStatus: "approved" });
         res.send(approvedProducts);
     } catch (err) {
         res.status(500).send({
