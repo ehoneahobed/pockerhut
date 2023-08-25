@@ -292,10 +292,43 @@ exports.getProduct = async (req, res) => {
 //     }
 // };
 
+// exports.getAllProducts = async (req, res) => {
+//     try {
+//         // Populate the 'vendor' field with vendor details
+//         const products = await Product.find().populate('vendor').populate('information.category', 'name');
+//         res.send(products);
+//     } catch (err) {
+//         res.status(500).send({
+//             message: "Error retrieving products"
+//         });
+//     }
+// };
+
 exports.getAllProducts = async (req, res) => {
     try {
         // Populate the 'vendor' field with vendor details
-        const products = await Product.find().populate('vendor');
+        const products = await Product.find()
+            .populate({
+                path: 'vendor',
+                model: 'Vendor', // Replace 'Vendor' with the actual model name
+            })
+            .populate({
+                path: 'information.category',
+                model: 'Category', // Replace 'Category' with the actual model name
+            })
+            .populate({
+                path: 'information.subcategory',
+                model: 'Subcategory', // Replace 'Subcategory' with the actual model name
+            })
+            .populate({
+                path: 'information.categoryQuestions.question',
+                model: 'CategoryQuestion', // Replace 'CategoryQuestion' with the actual model name
+            })
+            .populate({
+                path: 'reviews',
+                model: 'Review', // Replace 'Review' with the actual model name
+            });
+
         res.send(products);
     } catch (err) {
         res.status(500).send({
@@ -303,6 +336,8 @@ exports.getAllProducts = async (req, res) => {
         });
     }
 };
+
+
 
 // get all approved products
 exports.getApprovedProducts = async (req, res) => {
