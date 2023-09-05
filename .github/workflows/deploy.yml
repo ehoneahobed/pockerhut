@@ -13,21 +13,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Print SSH_PRIVATE_KEY
-        run: |
-          echo "SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}"
-
       - name: Install SSH key and configure known_hosts
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ssh_key.pem
           chmod 600 ssh_key.pem
           eval "$(ssh-agent -s)"
           ssh-add ssh_key.pem
+          mkdir -p ~/.ssh
           echo "18.232.109.18 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKhY4+e3/8kyCD3x8SuLlqBonJELOMVK+AeETEjwPWnl" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy to EC2
         run: |
-          ssh -v -i ssh_key.pem -o UserKnownHostsFile=~/.ssh/known_hosts ubuntu@18.232.109.18 'cd ./pockerhut-api && git pull && npm install && pm2 restart server.js'
+          ssh -v -i ssh_key.pem -o UserKnownHostsFile=~/.ssh/known_hosts -o BatchMode=yes ubuntu@18.232.109.18 'cd ./pockerhut-api && git pull && npm install && pm2 restart server.js'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
