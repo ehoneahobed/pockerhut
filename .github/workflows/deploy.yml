@@ -24,4 +24,4 @@ jobs:
         run: |
           ssh -i ssh_key.pem ubuntu@18.232.109.18 'cd /pockerhut-api && git pull && npm install && pm2 restart server.js'
         env:
-          PRIVATE_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
