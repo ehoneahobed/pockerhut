@@ -28,5 +28,5 @@ jobs:
         run: |
             ssh -i ssh_key.pem -o UserKnownHostsFile=~/.ssh/known_hosts -o BatchMode=yes ubuntu@18.232.109.18 'source ~/.nvm/nvm.sh && cd ./pockerhut-api && git pull && npm install && pm2 restart server'
             env:
-            SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+              SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       
