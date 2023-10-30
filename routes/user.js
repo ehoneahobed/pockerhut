@@ -27,17 +27,40 @@ router.get("/:id", verifyTokenAndAuthorization, userController.getUser);
 // get all users (only admins can)
 router.get("/", verifyTokenAndAdmin, userController.getUsers);
 
-// add billing information
+// Request password reset email
+router.post('/request-reset-password', userController.sendPasswordResetEmail);
+
+// reset password endpoint
+router.post('/reset-password/:token', userController.resetPassword);
+
+// // add billing information
+// router.post("/billing", verifyToken, userController.createBilling);
+
+// // get user billing information
+// router.get(
+//   "/billing/:id",
+//   verifyTokenAndAuthorization,
+//   userController.getUserBilling
+// );
+
+// // get all users with their respective billing information
+// router.get("/billing", verifyTokenAndAdmin, userController.getUsersWithBilling);
+
+
+// Add billing information
 router.post("/billing", verifyToken, userController.createBilling);
 
-// get user billing information
-router.get(
-  "/billing/:id",
-  verifyTokenAndAuthorization,
-  userController.getUserBilling
-);
+// Get user billing information
+router.get("/billing", verifyTokenAndAuthorization, userController.getUserBilling);
 
-// get all users with their respective billing information
-router.get("/billing", verifyTokenAndAdmin, userController.getUsersWithBilling);
+// Update user billing information
+router.put("/billing/:id", verifyTokenAndAuthorization, userController.updateBilling);
+
+// Delete user billing information
+router.delete("/billing/:id", verifyTokenAndAuthorization, userController.deleteBilling);
+
+// Get all users with their respective billing information
+router.get("/billing/all", verifyTokenAndAdmin, userController.getUsersWithBilling);
+
 
 module.exports = router;
