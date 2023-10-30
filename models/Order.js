@@ -102,6 +102,10 @@ const OrderSchema = new Schema({
       deliveryFeePerProduct: {
         type: Number
       },
+      pickup: {
+        type: Boolean,
+        default: false,
+      }
     },
   ],
   subtotal: {
