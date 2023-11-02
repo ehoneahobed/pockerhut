@@ -165,17 +165,24 @@ exports.loginVendor = async (req, res) => {
       expiresIn: "7d",
     });
 
+    // res.status(200).send({
+    //   token: token,
+    //   vendor: {
+    //     id: vendor._id,
+    //     shopName: vendor.sellerAccountInformation.shopName,
+    //     entityType: vendor.sellerAccountInformation.entityType,
+    //     email: vendor.sellerAccountInformation.email,
+    //     phoneNumber: vendor.sellerAccountInformation.phoneNumber,
+    //     storeStatus: vendor.storeStatus,
+    //   },
+    // });
+
+    // TO DO: remove password before returning the vendor obbject
     res.status(200).send({
       token: token,
-      vendor: {
-        id: vendor._id,
-        shopName: vendor.sellerAccountInformation.shopName,
-        entityType: vendor.sellerAccountInformation.entityType,
-        email: vendor.sellerAccountInformation.email,
-        phoneNumber: vendor.sellerAccountInformation.phoneNumber,
-        storeStatus: vendor.storeStatus,
-      },
+      vendor: vendor,
     });
+
   } catch (err) {
     res.status(500).send({
       message: "An error occurred while logging in the vendor",
