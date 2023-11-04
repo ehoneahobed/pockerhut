@@ -67,28 +67,34 @@ exports.getUsers = async (req, res) => {
 
 // send email for password reset
 exports.sendPasswordResetEmail = async (req, res) => {
-  const email = req.body.email;
-  const user = await User.findOne({ email });
+  try {
+    const email = req.body.email;
+    const user = await User.findOne({ email });
 
-  if (!user) {
-    return res.status(404).json({ message: "User not found." });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetToken = token;
+    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
+    await user.save();
+
+    const emailOptions = {
+      to: user.email,
+      subject: "Password Reset",
+      text: `To reset your password, click the following link: http://porkethut.com/reset-password/${token}`,
+      
+    };
+
+    console.log({ emailOptions });
+
+    await emailService.sendEmail(emailOptions);
+    res.status(200).json({ message: "Password reset email sent." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "There was an error sending the password reset email." });
   }
-
-  const token = crypto.randomBytes(32).toString("hex");
-  user.resetToken = token;
-  user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
-  await user.save();
-
-  const emailOptions = {
-    to: user.email,
-    subject: "Password Reset",
-    text: `To reset your password, click the following link: http://porkethut.com/reset-password/${token}`,
-    html: `<b>To reset your password, click the following link: </b><a href="http://porkethut.com/reset-password/${token}">Reset Password</a>`,
-  };
-
-  await emailService.sendEmail(emailOptions);
-
-  res.status(200).json({ message: "Password reset email sent." });
 };
 
 // reset password endpoint
