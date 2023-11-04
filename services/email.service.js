@@ -1,23 +1,23 @@
 const nodemailer = require('nodemailer');
 
+
 const transporter = nodemailer.createTransport({
   // configure  email service here
-    host: "mail.learninbits.com",
-    port: 465,
+    host: process.env.EMAIL_AUTH_HOST,
+    port: process.env.EMAIL_AUTH_PORT,
     auth: {
-      user: "ehoneah@learninbits.com",
+      user: process.env.EMAIL_AUTH_USER,
       pass: process.env.EMAIL_AUTH_PASS
     }
 });
 
 
-async function sendEmail({ to, subject, text, html }) {
+async function sendEmail({ to, subject, text }) {
   const mailOptions = {
-    from: '"PorkerHut Service" <service@porkethut.com>', 
+    from: '"PorkerHut Service" <ehoneah@learninbits.com>', 
     to,
     subject,
     text,
-    html,
   };
 
   try {
