@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const Billing = require("../models/Billing");
 const bcrypt = require("bcrypt");
-const emailService = require("../services/emailService");
+const emailService = require("../services/email.service");
 const crypto = require("crypto");
 
 // update user
