@@ -83,7 +83,7 @@ exports.sendPasswordResetEmail = async (req, res) => {
     const emailOptions = {
       to: user.email,
       subject: "Password Reset",
-      text: `To reset your password, click the following link: http://porkethut.com/reset-password/${token}`,
+      text: `To reset your password, click the following link: https://pokerhut-dev.vercel.app/reset-password/${token}`,
       
     };
 
