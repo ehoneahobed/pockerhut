@@ -232,16 +232,56 @@ exports.resetPassword = async (req, res) => {
 // }
 
 // Create Billing
+// exports.createBilling = async (req, res) => {
+//   try {
+//     const user_id = req.user.id;
+//     // console.log(user_id);
+//     const billing = new Billing({ ...req.body, user: user_id });
+//     const savedBilling = await billing.save();
+
+//     if (req.body.isDefault) {
+//       // Set this billing as the default for the user
+//       await User.findByIdAndUpdate(user_id, { billing_id: savedBilling._id });
+//     }
+
+//     res.status(200).json(savedBilling);
+//   } catch (error) {
+//     res.status(500).json(error);
+//   }
+// };
+
+
+// Create Billing
 exports.createBilling = async (req, res) => {
   try {
     const user_id = req.user.id;
-    const billing = new Billing({ ...req.body, user_id });
+    const billing = new Billing({ ...req.body, user: user_id });
+    console.log(billing);
     const savedBilling = await billing.save();
-
-    if (req.body.default) {
-      // Set this billing as the default for the user
-      await User.findByIdAndUpdate(user_id, { billing_id: savedBilling._id });
+    
+    // Fetch the user and update their billing information
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    
+    // If isDefault is true, set all other billingInfo isDefault to false
+    if (req.body.isDefault) {
+      user.billingInfo.forEach(billing => {
+        if (billing._id != savedBilling._id) {
+          // Assuming Billing model has an isDefault field
+          Billing.findByIdAndUpdate(billing._id, { isDefault: false }).exec();
+        }
+      });
+    }
+    
+
+    // Add the new billing information to the user's billingInfo array
+    user.billingInfo.push(savedBilling._id);
+    
+    // Save the updated user
+    await user.save();
 
     res.status(200).json(savedBilling);
   } catch (error) {
@@ -253,8 +293,10 @@ exports.createBilling = async (req, res) => {
 exports.getUserBilling = async (req, res) => {
   try {
     const user_id = req.user.id;
-    const billing = await Billing.findOne({ user: user_id });
-    res.status(200).json(billing);
+    console.log(user_id);
+    const billing = await Billing.find({ user: user_id });
+    console.log(billing);
+    res.status(200).json({billing});
   } catch (error) {
     res.status(500).json(error);
   }
@@ -307,7 +349,8 @@ const sanitizeUsers = (users) => {
 // Get All Users With Their Billing Info
 exports.getUsersWithBilling = async (req, res) => {
   try {
-    const users = await User.find().populate("billing_id");
+    const users = await User.find().populate("billingInfo");
+    // console.log(users);
     const sanitizedUsers = sanitizeUsers(users);
 
     res.status(200).json(sanitizedUsers);

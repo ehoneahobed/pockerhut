@@ -45,6 +45,7 @@ const billingSchema = new mongoose.Schema(
     addressLine1: {
       type: String,
       required: true,
+      unique: true,
     },
     addressLine2: {
       type: String,

@@ -30,7 +30,7 @@ router.get("/:productId", productController.getProduct);
 router.get("/", productController.getAllProducts);
 
 // Get all products by Given vendor
-router.get("/:vendorId", productController.getProductsByVendor);
+router.get("/vendor/:vendorId", productController.getProductsByVendor);
 
 // get all approved product from a given vendor
 router.get("/approved/:vendorId", productController.getAllApprovedProductsByVendor);
