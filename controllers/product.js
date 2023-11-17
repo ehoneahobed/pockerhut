@@ -355,7 +355,7 @@ exports.getApprovedProducts = async (req, res) => {
 // get all products from a given vendor
 exports.getProductsByVendor = async (req, res) => {
     try {
-        const products = await Product.find({ "vendor._id": req.params.vendorId });
+        const products = await Product.find({ "vendor": req.params.vendorId });
         if (!products) {
             return res.status(404).send({
                 message: "No products found for vendor with id " + req.params.vendorId
