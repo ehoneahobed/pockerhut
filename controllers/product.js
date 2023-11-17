@@ -355,13 +355,16 @@ exports.getApprovedProducts = async (req, res) => {
 // get all products from a given vendor
 exports.getProductsByVendor = async (req, res) => {
     try {
-        const products = await Product.find({ vendor: req.params.vendorId });
-        if (!products) {
-            return res.status(404).send({
-                message: "No products found for vendor with id " + req.params.vendorId
-            });
-        }
-        res.send(products);
+        const products = await Product.find({ vendor: req.params.vendorId })
+            .populate('vendor', 'sellerAccountInformation') // Add this line to populate vendor details
+            .exec(); // Executes the query
+        
+            if (!products.length) {
+                return res.status(404).send({
+                    message: "No products found for vendor with id " + req.params.vendorId
+                });
+            }
+            res.send(products);
     } catch (err) {
         res.status(500).send({
             message: "Error retrieving products for vendor with id " + req.params.vendorId
@@ -376,9 +379,11 @@ exports.getAllApprovedProductsByVendor = async (req, res) => {
         const products = await Product.find({
             vendor: vendorId,
             approvalStatus: "approved"
-        });
+        })
+        .populate('vendor', 'sellerAccountInformation') // Add this line to populate vendor details
+        .exec(); // Executes the query
 
-        if (!products) {
+        if (!products.length) {
             return res.status(404).send({
                 message: "No approved products found for the given vendor"
             });
