@@ -465,3 +465,56 @@ exports.updateVendorStatus = async (req, res) => {
     });
   }
 };
+
+
+// send email for password reset
+exports.sendPasswordResetEmail = async (req, res) => {
+  try {
+    const email = req.body.email;
+    const vendor = await Vendor.findOne({ "sellerAccountInformation.email": email });
+
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetToken = token;
+    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
+    await user.save();
+
+    const emailOptions = {
+      to: user.email,
+      subject: "Password Reset",
+      text: `To reset your password, click the following link: https://pokerhut-dev.vercel.app/vendor/reset-password/${token}`,
+      
+    };
+
+    console.log({ emailOptions });
+
+    await emailService.sendEmail(emailOptions);
+    res.status(200).json({ message: "Password reset email sent." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "There was an error sending the password reset email." });
+  }
+};
+
+// reset password endpoint
+exports.resetPassword = async (req, res) => {
+  const token = req.params.token;
+  const vendor = await Vendor.findOne({
+    resetToken: token,
+    resetTokenExpiration: { $gt: Date.now() },
+  });
+
+  if (!vendor) {
+    return res.status(400).json({ error: "Token is invalid or has expired." });
+  }
+
+  user.password = await bcrypt.hash(req.body.password, 10);
+  user.resetToken = undefined;
+  user.resetTokenExpiration = undefined;
+  await user.save();
+
+  res.status(200).json({ message: "Password has been reset." });
+};
