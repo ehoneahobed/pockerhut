@@ -26,10 +26,17 @@ router.delete("/:id", orderController.deleteOrder);
 // Get orders belonging to a particular customer
 router.get("/customer/:customerId", orderController.getOrdersByCustomer);
 
-// Get orders belonging to a particular vendor
+// Get all orders belonging to a particular vendor
 router.get("/vendor/:vendorId", orderController.getOrdersByVendor);
 
 // Get all orders
 router.get("/", orderController.getAllOrders);
+
+// Get details of a specific order
+router.get("/:id", orderController.getOrderById);
+
+// Get products by a specific vendor in a given order
+router.get("/:orderId/vendor/:vendorId/products", orderController.getProductsByVendorInOrder);
+
 
 module.exports = router;

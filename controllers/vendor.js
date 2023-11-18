@@ -98,6 +98,7 @@ exports.createVendor = async (req, res) => {
     vendorBankAccount: req.body.vendorBankAccount,
     storeStatus: req.body.storeStatus || "pending",
     profilePhoto: profilePhoto,
+    pickupAddresses: req.body.pickupAddresses || [],
   });
 
   try {
@@ -234,6 +235,74 @@ exports.loginVendor = async (req, res) => {
 //   }
 // };
 
+// exports.updateVendor = async (req, res) => {
+//   // Validate the request
+//   if (
+//     !req.body.sellerAccountInformation ||
+//     !req.body.businessInformation ||
+//     !req.body.vendorBankAccount
+//   ) {
+//     return res.status(400).send({
+//       message:
+//         "Seller account information, business information, and vendor bank account are required",
+//     });
+//   }
+
+//   // Get the uploaded file information
+//   const IDFile = req.body.vendorFiles.IDFile || "";
+//   const CACCertificateFile = req.body.vendorFiles.CACCertificateFile || "";
+//   const TINCertificateFile = req.body.vendorFiles.TINCertificateFile || "";
+//   const profilePhoto = req.body.vendorFiles.profilePhoto || "";
+
+//   // Update the businessInformation with the file information
+//   req.body.businessInformation.IDFile = IDFile;
+//   req.body.businessInformation.CACCertificateFile = CACCertificateFile;
+//   req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+
+//   // Encrypt password using bcrypt
+//   if (req.body.sellerAccountInformation.password) {
+//     const password = req.body.sellerAccountInformation.password;
+//     const salt = await bcrypt.genSalt(saltRounds);
+//     const encryptedPassword = await bcrypt.hash(password, salt);
+//     req.body.sellerAccountInformation.password = encryptedPassword;
+//   }
+
+//   // Find the vendor and update it with the request body
+//   try {
+//     const vendor = await Vendor.findByIdAndUpdate(
+//       req.params.vendorId,
+//       {
+//         sellerAccountInformation: req.body.sellerAccountInformation,
+//         businessInformation: req.body.businessInformation,
+//         vendorBankAccount: req.body.vendorBankAccount,
+//         storeStatus: req.body.storeStatus || "pending",
+//         profilePhoto: profilePhoto,
+//       },
+//       { new: true }
+//     );
+//     if (!vendor) {
+//       return res.status(404).send({
+//         message: "Vendor not found with id " + req.params.vendorId,
+//       });
+//     }
+
+//     // Exclude the password from the returned payload
+//     const responseData = vendor.toObject();
+//     delete responseData.sellerAccountInformation.password;
+
+//     res.send(responseData);
+//   } catch (err) {
+//     if (err.kind === "ObjectId") {
+//       return res.status(404).send({
+//         message: "Vendor not found with id " + req.params.vendorId,
+//       });
+//     }
+//     return res.status(500).send({
+//       message: "Error updating vendor with id " + req.params.vendorId,
+//     });
+//   }
+// };
+
 exports.updateVendor = async (req, res) => {
   // Validate the request
   if (
@@ -266,17 +335,25 @@ exports.updateVendor = async (req, res) => {
     req.body.sellerAccountInformation.password = encryptedPassword;
   }
 
-  // Find the vendor and update it with the request body
+  // Prepare the update object
+  const updateObject = {
+    sellerAccountInformation: req.body.sellerAccountInformation,
+    businessInformation: req.body.businessInformation,
+    vendorBankAccount: req.body.vendorBankAccount,
+    storeStatus: req.body.storeStatus || "pending",
+    profilePhoto: profilePhoto,
+  };
+
+  // Include pickupAddresses in the update if provided
+  if (req.body.pickupAddresses) {
+    updateObject.pickupAddresses = req.body.pickupAddresses;
+  }
+
+  // Find the vendor and update it with the update object
   try {
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.vendorId,
-      {
-        sellerAccountInformation: req.body.sellerAccountInformation,
-        businessInformation: req.body.businessInformation,
-        vendorBankAccount: req.body.vendorBankAccount,
-        storeStatus: req.body.storeStatus || "pending",
-        profilePhoto: profilePhoto,
-      },
+      updateObject,
       { new: true }
     );
     if (!vendor) {

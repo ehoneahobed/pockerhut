@@ -38,27 +38,30 @@ const mongoose = require("mongoose");
 
 const billingSchema = new mongoose.Schema(
   {
-    contact: {
+    firstName: {
       type: String,
       required: true,
     },
-    addressLine1: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    addressLine2: {
-      type: String,
-    },
-    country: {
+    lastName: {
       type: String,
       required: true,
     },
+    email: {
+      type: String,
+    },
+    phoneNumber: {
+      type: String,
+      required: true,
+    },
+    address: {
+      type: String,
+    },
+
     state: {
       type: String,
       required: true,
     },
-    town: {
+    city: {
       type: String,
       required: true,
     },

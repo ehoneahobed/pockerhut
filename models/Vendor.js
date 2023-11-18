@@ -45,6 +45,7 @@ const VendorSchema = new Schema({
   profilePhoto: { type: String },
   resetToken: { type: String },
   resetTokenExpiration: { type: Date },
+  pickupAddresses: [String],
 });
 
 module.exports = mongoose.model("Vendor", VendorSchema);
