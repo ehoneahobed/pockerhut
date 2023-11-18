@@ -43,4 +43,11 @@ router.put(
   vendorController.updateVendorStatus
 );
 
+
+// Request password reset email
+router.post('/request-reset-password', vendorController.sendPasswordResetEmail);
+
+// reset password endpoint
+router.post('/reset-password/:token', vendorController.resetPassword);
+
 module.exports = router;

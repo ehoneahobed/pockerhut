@@ -133,6 +133,35 @@ exports.updateApprovalStatus = async (req, res) => {
     }
 };
 
+// update visibilityStatus of a given product
+exports.updateVisibilityStatus = async (req, res) => {
+    const id = req.params.id;
+    try {
+        const product = await Product.findById(id);
+
+        if (!product) {
+            return res.status(404).send({
+                message: "Product not found with id " + id
+            });
+        }
+
+        product.visibilityStatus = req.body.visibilityStatus;
+
+        const updatedProduct = await product.save();
+
+        res.send(updatedProduct);
+    } catch (err) {
+        if (err.kind === 'ObjectId') {
+            return res.status(404).send({
+                message: "Product not found with id " + id
+            });
+        }
+        return res.status(500).send({
+            message: "Error updating product with id " + id
+        });
+    }
+};
+
 
 // Updating a product
 // exports.updateProduct = async (req, res) => {
@@ -447,4 +476,3 @@ exports.getFeaturedProducts = async (req, res) => {
       });
     }
   };
-  
