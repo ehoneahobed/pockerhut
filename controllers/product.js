@@ -385,7 +385,7 @@ exports.getApprovedProducts = async (req, res) => {
 exports.getProductsByVendor = async (req, res) => {
     try {
         const products = await Product.find({ vendor: req.params.vendorId })
-            .populate('vendor', 'sellerAccountInformation') // Add this line to populate vendor details
+            .populate('vendor', '-sellerAccountInformation.password') // Add this line to populate vendor details
             .exec(); // Executes the query
         
             if (!products.length) {
@@ -409,7 +409,7 @@ exports.getAllApprovedProductsByVendor = async (req, res) => {
             vendor: vendorId,
             approvalStatus: "approved"
         })
-        .populate('vendor', 'sellerAccountInformation') // Add this line to populate vendor details
+        .populate('vendor', '-sellerAccountInformation.password') // Add this line to populate vendor details
         .exec(); // Executes the query
 
         if (!products.length) {
