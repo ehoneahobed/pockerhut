@@ -44,13 +44,14 @@ exports.createProduct = async (req, res) => {
       information,
       details,
       pricing,
-      images,
+      productImages,
       approvalStatus,
       visibilityStatus,
       featured,
       avgRating,
     } = req.body;
 
+    console.log(productImages);
     // Create an array to store the formatted category questions
     const formattedCategoryQuestions = information.categoryQuestions.map(
       (questionData) => {
@@ -81,7 +82,7 @@ exports.createProduct = async (req, res) => {
         productPrice: pricing.productPrice,
         quantity: pricing.quantity,
       },
-      images,
+      images: productImages,
       approvalStatus,
       visibilityStatus,
       featured,
