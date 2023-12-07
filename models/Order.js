@@ -113,7 +113,7 @@ const ProductDetailSchema = new Schema({
 const OrderSchema = new Schema({
   customer: {
     type: Schema.Types.ObjectId,
-    ref: "Customer",
+    ref: "User",
   },
   orderDate: {
     type: Date,
@@ -133,7 +133,7 @@ const OrderSchema = new Schema({
   },
   billingInformation: {
     type: Schema.Types.ObjectId,
-    ref: "BillingInformation",
+    ref: "Billing",
   },
   status: {
     type: String,

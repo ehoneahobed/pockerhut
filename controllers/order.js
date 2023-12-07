@@ -252,10 +252,30 @@ exports.deleteOrder = async (req, res) => {
 };
 
 // get orders belonging to a particular customer
+// exports.getOrdersByCustomer = async (req, res) => {
+//     try {
+//         const customerId = req.params.customerId;
+//         const orders = await Order.find({ customer: customerId });
+//         res.status(200).json({ success: true, orders });
+//     } catch (error) {
+//         res.status(500).json({ success: false, error: error.message });
+//     }
+// };
+
 exports.getOrdersByCustomer = async (req, res) => {
     try {
         const customerId = req.params.customerId;
-        const orders = await Order.find({ customer: customerId });
+        const orders = await Order.find({ customer: customerId })
+                            .populate({
+                                path: 'productDetails.productID',
+                                model: 'Product',
+                                select: 'information.productName images'
+                            })
+                            .populate({
+                                path: 'productDetails.vendor',
+                                model: 'Vendor',
+                                select: 'sellerAccountInformation.shopName businessInformation.address1 businessInformation.city businessInformation.country'
+                            });
         res.status(200).json({ success: true, orders });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -291,7 +311,11 @@ exports.getOrdersByVendor = async (req, res) => {
     try {
         const vendorId = req.params.vendorId;
         let orders = await Order.find({ "productDetails.vendor": vendorId })
-                                .populate("customer productDetails.productID productDetails.vendor billingInformation");
+                                .populate({
+                                    path: 'customer',
+                                    select: '-password'
+                                })
+                                .populate("productDetails.productID productDetails.vendor billingInformation");
 
         if (orders.length === 0) {
             return res.status(404).send({
