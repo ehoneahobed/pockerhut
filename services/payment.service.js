@@ -127,11 +127,13 @@ class PaymentService{
         return new Promise((resolve, reject) => {
             verifyPayment(ref, async (error, body) => {
                 if (error) {
+                    // console.log(error);
                     return reject(error);
                 }
     
                 try {
                     const response = JSON.parse(body);
+                    // console.log(response)
                     const { reference, amount, status } = response.data;
                     const { email } = response.data.customer;
                     const full_name = response.data.metadata.full_name;
@@ -146,7 +148,7 @@ class PaymentService{
                         // console.log(amount.toString())
 
                         const updatedOrder = await this.updateOrderStatus(order, true);
-                        // console.log(updatedOrder)
+                        // console.log("Updated order:", updatedOrder);
                         const newPayment = { reference, amount, email, full_name, status, order: updatedOrder._id };
                         const payment = await Payment.create(newPayment);
     
