@@ -9,7 +9,7 @@ const {
 const router = express.Router()
 
 router.post('/', startPayment);
-router.post('/create', createPayment);
+router.get('/create', createPayment);
 router.get('/details', getPayment);
 router.get('/banks', getBanks);
 router.get('/account-details', getAccountDetails);
