@@ -13,10 +13,22 @@ exports.startPayment = async (req, res) => {
 
 exports.createPayment = async (req, res) => {
     try{
-        console.log(`Query: ${req.query}`);
-        console.log(`Req Body: ${req.body}`);
+        // console.log("Query:", req.query);
+        // console.log("Req Body:", req.body);
         const response = await paymentInstance.createPayment(req.query);
-        res.status(201).json({status: "Success", data : response});
+
+        // console.log(response.status)
+
+        // res.status(201).json({status: "Success", data : response});
+        // console.log(response);
+        res.redirect(`https://pokerhut-dev.vercel.app/billing?status=${response.status}`);
+
+        // if (response && response.status) {
+        //     res.redirect(`https://pokerhut-dev.vercel.app/billing?status=${response.status}`);
+        // } else {
+        //     // Handle the scenario where response or response.status is not available
+        //     res.status(400).json({ status: "Failed", message: "Invalid response from payment service" });
+        // }
         // full_name not being passed
     }catch(error){
         res.status(500).json({status: "Failed", message : error.message});
