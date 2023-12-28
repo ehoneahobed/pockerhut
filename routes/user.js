@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const {
   verifyTokenAndAdmin,
+  verifyTokenAndSuperAdmin,
   verifyTokenAndAuthorization,
   verifyToken,
 } = require("../controllers/verifyToken");
@@ -26,6 +27,9 @@ router.get("/:id", verifyTokenAndAuthorization, userController.getUser);
 
 // get all users (only admins can)
 router.get("/", verifyTokenAndAdmin, userController.getUsers);
+
+// get admins and superadmin (only superadmin can)
+router.get("/admin",   verifyTokenAndSuperAdmin, userController.getAdminUsers);
 
 // Request password reset email
 router.post('/request-reset-password', userController.sendPasswordResetEmail);

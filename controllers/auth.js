@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 exports.registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, role, isAccessRevoked } = req.body;
 
     // check if user with this email already exists
     const existingUser = await User.findOne({ email });
@@ -21,6 +21,8 @@ exports.registerUser = async (req, res) => {
       lastName: lastName,
       email: email,
       password: hashedPassword,
+      role: role,
+      isAccessRevoked: isAccessRevoked,
     });
 
     const savedUser = await newUser.save();
@@ -52,6 +54,8 @@ exports.loginUser = async (req, res) => {
       {
         id: user._id,
         isAdmin: user.isAdmin,
+        role: user.role, // Include user's role in the token
+        isAccessRevoked: user.isAccessRevoked,
       },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "3d" }
