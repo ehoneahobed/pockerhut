@@ -42,11 +42,11 @@ exports.createPayment = async (req, res) => {
         // console.log(response)
         if (response && response.status) {
             // Redirect to the frontend with the payment status
-            console.log('This path should work')
+            // console.log('This path should work')
             res.redirect(`https://pokerhut-dev.vercel.app/billing?status=${response.status}`);
         } else {
             // Handle the scenario where response or response.status is not available
-            console.log('This path should not work')
+            // console.log('This path should not work')
             res.redirect(`https://pokerhut-dev.vercel.app/billing?status=error`);
         }
     } catch (error) {

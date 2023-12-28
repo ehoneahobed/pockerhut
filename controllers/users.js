@@ -65,6 +65,50 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+// get admin users
+exports.getAdminUsers = async (req, res) => {
+  try {
+    // Query to find only users with roles 'admin' or 'superadmin'
+    const users = await User.find({ role: { $in: ['admin', 'superadmin'] }});
+
+    // Sanitize users and remove their passwords
+    const sanitizedUsers = users.map((user) => {
+      const { password, ...others } = user._doc;
+      return others;
+    });
+
+    res.status(200).json(sanitizedUsers);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+};
+
+// updating isAccessRevoked
+exports.updateAccessRevocation = async (req, res) => {
+  const userId = req.params.id; // Assuming the user's ID is passed as a URL parameter
+  const { isAccessRevoked } = req.body; // Assuming the new value is sent in the request body
+
+  try {
+    // Find the user by ID and update the isAccessRevoked field
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { isAccessRevoked: isAccessRevoked },
+      { new: true } // Returns the updated document
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Optionally sanitize the output
+    const { password, ...sanitizedUser } = updatedUser._doc;
+
+    res.status(200).json({ message: 'User access revocation status updated', user: sanitizedUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user access revocation status', error: error });
+  }
+};
+
 // send email for password reset
 exports.sendPasswordResetEmail = async (req, res) => {
   try {

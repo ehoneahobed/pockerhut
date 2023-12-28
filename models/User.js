@@ -34,6 +34,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'superadmin'],
+      default: 'user'
+    },
+    isAccessRevoked: { // New field to indicate if access is revoked
+      type: Boolean,
+      default: true,
+    },
     resetToken: String,
     resetTokenExpiration: Date,
   },

@@ -367,8 +367,6 @@ exports.getAllProducts = async (req, res) => {
     }
 };
 
-
-
 // get all approved products
 exports.getApprovedProducts = async (req, res) => {
     try {
