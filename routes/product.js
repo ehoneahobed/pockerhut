@@ -40,6 +40,6 @@ router.get("/vendor/:vendorId", productController.getProductsByVendor);
 router.get("/approved/:vendorId", productController.getAllApprovedProductsByVendor);
 
 // get all featured products
-router.get("/approved/:vendorId", productController.getFeaturedProducts);
+router.get("/featured", productController.getFeaturedProducts);
 
 module.exports = router;
