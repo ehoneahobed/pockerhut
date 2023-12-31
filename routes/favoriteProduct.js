@@ -1,17 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const favoriteProductsController = require('./favoriteProductsController');
+const favoriteProductsController = require('../controllers/favoriteProduct');
 
 // GET all favorite products
-router.get('/', favoriteProductsController.getAllFavoriteProducts);
+// router.get('/', favoriteProductsController.getAllFavoriteProducts);
 
 // GET a user's favorite products
-router.get('/:userId', favoriteProductsController.getFavoriteProductsByUserId);
+router.get('/:userId', favoriteProductsController.getFavoritesByUserId);
 
-// POST a new favorite product
-router.post('/', favoriteProductsController.createFavoriteProduct);
+// Add a new favorite product
+router.post('/', favoriteProductsController.addToFavorites);
 
 // DELETE a favorite product
-router.delete('/:id', favoriteProductsController.deleteFavoriteProduct);
+router.delete('/delete', favoriteProductsController.removeFromFavorites);
+
+// CHECK if a product is part of a user's favorite products
+router.get('/check-favorite', favoriteProductsController.checkIfFavorite);
+
 
 module.exports = router;
