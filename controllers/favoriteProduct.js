@@ -25,7 +25,7 @@ exports.addToFavorites = async (req, res, next) => {
 // Controller function to get all favorite products of a user
 exports.getFavoritesByUserId = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.body;
 
     const favoriteProducts = await FavoriteProduct.find({ userId });
 
@@ -40,7 +40,7 @@ exports.getFavoritesByUserId = async (req, res, next) => {
 // Controller function to remove a product from favorites
 exports.removeFromFavorites = async (req, res, next) => {
   try {
-    const { userId, productId } = req.body;
+    const { userId, productId } = req.params;
 
     await FavoriteProduct.deleteOne({ userId, productId });
 
@@ -55,7 +55,7 @@ exports.removeFromFavorites = async (req, res, next) => {
 // Controller function to check if a product is in favorites
 exports.checkIfFavorite = async (req, res, next) => {
   try {
-    const { userId, productId } = req.body;
+    const { userId, productId } = req.params;
 
     const favoriteProduct = await FavoriteProduct.findOne({
       userId,
