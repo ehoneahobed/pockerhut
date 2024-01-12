@@ -6,9 +6,12 @@ exports.addToFavorites = async (req, res, next) => {
   try {
     const { userId, productId } = req.body;
 
+    user = userId;
+    product = productId;
+
     const favoriteProduct = new FavoriteProduct({
-      userId,
-      productId,
+      user,
+      product,
     });
 
     await favoriteProduct.save();
@@ -25,9 +28,11 @@ exports.addToFavorites = async (req, res, next) => {
 // Controller function to get all favorite products of a user
 exports.getFavoritesByUserId = async (req, res, next) => {
   try {
-    const { userId } = req.body;
+    const { userId } = req.params;
 
-    const favoriteProducts = await FavoriteProduct.find({ userId });
+    user = userId;
+
+    const favoriteProducts = await FavoriteProduct.find({ user }).populate('product');
 
     res.status(200).json({
       favoriteProducts,
