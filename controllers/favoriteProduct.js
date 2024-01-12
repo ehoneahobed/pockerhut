@@ -57,9 +57,12 @@ exports.checkIfFavorite = async (req, res, next) => {
   try {
     const { userId, productId } = req.params;
 
+    user = userId;
+    product = productId;
+
     const favoriteProduct = await FavoriteProduct.findOne({
-      userId,
-      productId,
+      user,
+      product,
     });
 
     res.status(200).json({
