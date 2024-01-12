@@ -15,7 +15,7 @@ router.post('/', favoriteProductsController.addToFavorites);
 router.delete('/delete', favoriteProductsController.removeFromFavorites);
 
 // CHECK if a product is part of a user's favorite products
-router.get('/check-favorite', favoriteProductsController.checkIfFavorite);
+router.get('/check-favorite/:userId/:productId', favoriteProductsController.checkIfFavorite);
 
 
 module.exports = router;
