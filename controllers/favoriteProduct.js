@@ -32,7 +32,15 @@ exports.getFavoritesByUserId = async (req, res, next) => {
 
     user = userId;
 
-    const favoriteProducts = await FavoriteProduct.find({ user }).populate('product');
+    const favoriteProducts = await FavoriteProduct.find({ user })
+      .populate({
+        path: 'product',
+        populate: { 
+          path: 'vendor',
+          model: 'Vendor',
+          select: '-password' // exclude the password field
+        }
+      });
 
     res.status(200).json({
       favoriteProducts,
