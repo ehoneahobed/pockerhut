@@ -55,7 +55,7 @@ router.post('/reset-password/:token', userController.resetPassword);
 router.post("/billing", verifyToken, userController.createBilling);
 
 // Get user billing information
-router.get("/billing/me", verifyTokenAndAuthorization, userController.getUserBilling);
+router.get("/billing/:id", verifyTokenAndAuthorization, userController.getUserBilling);
 
 // Update user billing information
 router.put("/billing/:id", verifyTokenAndAuthorization, userController.updateBilling);
