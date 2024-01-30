@@ -409,6 +409,10 @@ exports.getAllApprovedProductsByVendor = async (req, res) => {
             approvalStatus: "approved"
         })
         .populate('vendor', '-sellerAccountInformation.password') // Add this line to populate vendor details
+        .populate('information.category', 'name') // Populate the category field and select only the name field
+        .populate('information.subcategory', 'name') // Populate the subcategory field and select only the name field
+        .populate('reviews') // Populate the reviews field
+        .populate('information.categoryQuestions.question', 'question') // Populate the categoryQuestions.question field and select only the question field
         .exec(); // Executes the query
 
         if (!products.length) {
