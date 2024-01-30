@@ -23,4 +23,8 @@ router.post("/add", ratingController.addRating);
 // Route for getting rating stats for a product
 router.get("/products/:productId/rating-stats", ratingController.getRatingStatsForProduct);
 
+
+// Route for getting all rating details for a product
+router.get("/products/:productId/details", ratingController.getProductRatingDetails);
+
 module.exports = router;

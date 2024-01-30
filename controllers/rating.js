@@ -229,3 +229,70 @@ exports.getRatingStatsForProduct = async (req, res) => {
     }
   };
   
+
+  exports.getProductRatingDetails = async (req, res) => {
+    try {
+      const productId = req.params.productId;
+  
+      const ratingStatistics = await Rating.aggregate([
+        { $match: { product_id: mongoose.Types.ObjectId(productId) } },
+        {
+          $group: {
+            _id: "$product_id",
+            averageRating: { $avg: "$rating" },
+            totalRatings: { $sum: 1 },
+            total5Star: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
+            total4Star: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
+            total3Star: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
+            total2Star: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
+            total1Star: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
+            ratings: { $push: { rating: "$rating", comment: "$comment", createdAt: "$created_at", userId: "$user_id" } }
+          }
+        },
+        { $unwind: "$ratings" },
+        {
+          $lookup: {
+            from: "users",
+            localField: "ratings.userId",
+            foreignField: "_id",
+            as: "ratings.userDetails"
+          }
+        },
+        { $unwind: "$ratings.userDetails" },
+        {
+          $project: {
+            averageRating: 1,
+            totalRatings: 1,
+            total5Star: 1,
+            total4Star: 1,
+            total3Star: 1,
+            total2Star: 1,
+            total1Star: 1,
+            "ratings.rating": 1,
+            "ratings.comment": 1,
+            "ratings.createdAt": 1,
+            "ratings.userDetails.firstName": 1,
+            "ratings.userDetails.lastName": 1,
+            "ratings.userDetails.email": 1
+          }
+        },
+        {
+          $group: {
+            _id: "$_id",
+            averageRating: { $first: "$averageRating" },
+            totalRatings: { $first: "$totalRatings" },
+            total5Star: { $first: "$total5Star" },
+            total4Star: { $first: "$total4Star" },
+            total3Star: { $first: "$total3Star" },
+            total2Star: { $first: "$total2Star" },
+            total1Star: { $first: "$total1Star" },
+            ratings: { $push: "$ratings" }
+          }
+        }
+      ]);
+  
+      res.status(200).json({ ratingStatistics });
+    } catch (error) {
+      res.status(500).send({ error: error.message });
+    }
+  };
