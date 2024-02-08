@@ -306,16 +306,69 @@ exports.getOrdersByCustomer = async (req, res) => {
 //     }
 // };
 
-// get all orders belonging to a particular vendor
+// // get all orders belonging to a particular vendor
+// exports.getOrdersByVendor = async (req, res) => {
+//     try {
+//         const vendorId = req.params.vendorId;
+//         let orders = await Order.find({ "productDetails.vendor": vendorId })
+//                                 .populate({
+//                                     path: 'customer',
+//                                     select: '-password'
+//                                 })
+//                                 .populate("productDetails.productID productDetails.vendor billingInformation");
+
+//         if (orders.length === 0) {
+//             return res.status(404).send({
+//                 message: "Orders not found for the given vendor"
+//             });
+//         }
+
+//         // Filter productDetails to only include products from this vendor
+//         orders = orders.map(order => {
+//             const filteredProductDetails = order.productDetails.filter(pd => pd.vendor.toString() === vendorId);
+
+//             // Mapping to include only relevant fields
+//             const modifiedProductDetails = filteredProductDetails.map(pd => ({
+//                 ...pd.toObject(),
+//                 // Include other product fields as needed
+//                 deliveryOption: pd.deliveryOption,
+//                 pickupAddress: pd.pickupAddress
+//             }));
+
+//             return { ...order.toObject(), productDetails: modifiedProductDetails };
+//         });
+
+//         return res.status(200).send({ orders });
+//     } catch (error) {
+//         return res.status(500).send({
+//             error: error.message
+//         });
+//     }
+// };
+
 exports.getOrdersByVendor = async (req, res) => {
     try {
         const vendorId = req.params.vendorId;
+
         let orders = await Order.find({ "productDetails.vendor": vendorId })
                                 .populate({
                                     path: 'customer',
                                     select: '-password'
                                 })
-                                .populate("productDetails.productID productDetails.vendor billingInformation");
+                                .populate({
+                                    path: 'productDetails.productID', // Assuming this is the correct reference to the Product model
+                                    populate: [{
+                                        path: 'information.category', // Assuming 'information' contains 'category'
+                                        model: 'Category'
+                                    }, {
+                                        path: 'information.subcategory',
+                                        model: 'Subcategory'
+                                    }, {
+                                        path: 'vendor',
+                                        select: 'name email' // Adjust according to what details you need from the vendor
+                                    }]
+                                })
+                                .populate("billingInformation"); // Assuming this is correctly referring to a separate document
 
         if (orders.length === 0) {
             return res.status(404).send({
@@ -323,21 +376,7 @@ exports.getOrdersByVendor = async (req, res) => {
             });
         }
 
-        // Filter productDetails to only include products from this vendor
-        orders = orders.map(order => {
-            const filteredProductDetails = order.productDetails.filter(pd => pd.vendor.toString() === vendorId);
-
-            // Mapping to include only relevant fields
-            const modifiedProductDetails = filteredProductDetails.map(pd => ({
-                ...pd.toObject(),
-                // Include other product fields as needed
-                deliveryOption: pd.deliveryOption,
-                pickupAddress: pd.pickupAddress
-            }));
-
-            return { ...order.toObject(), productDetails: modifiedProductDetails };
-        });
-
+        // Since product details are already included through population, there's no need to filter or map unless you're modifying or adding to the populated data
         return res.status(200).send({ orders });
     } catch (error) {
         return res.status(500).send({
