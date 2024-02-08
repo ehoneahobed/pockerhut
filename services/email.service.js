@@ -28,6 +28,16 @@ async function sendEmail({ to, subject, text }) {
   }
 }
 
+// Function specific for sending invitation emails
+async function sendInvitationEmail({ to, token }) {
+  const subject = 'You\'re Invited to Join as an Admin';
+  const text = `You have been invited to register as an admin. Please use the following token to complete your registration process: ${token}\n\n` +
+               `Use this link to register: ${process.env.FRONTEND_BASE_URL}/admin/registration?token=${encodeURIComponent(token)}`;
+
+  await sendEmail({ to, subject, text });
+}
+
 module.exports = {
   sendEmail,
+  sendInvitationEmail,
 };

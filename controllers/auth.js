@@ -1,10 +1,36 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
+const Invitation = require("../models/AdminInvitation");
 const jwt = require('jsonwebtoken');
+const crypto = require("crypto");
+const { sendInvitationEmail } = require('../services/email.service');
 
 exports.registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role, isAccessRevoked } = req.body;
+    const { firstName, lastName, email, password, role, isAccessRevoked, invitationToken } = req.body;
+
+       // Restrict registration for admin or superadmin roles to those with a valid invitation token
+       if (role === 'admin' || role === 'superadmin') {
+        if (!invitationToken) {
+          return res.status(400).json({ message: "Missing invitation token for admin or superadmin registration." });
+        }
+  
+        const invitation = await Invitation.findOne({
+          token: invitationToken,
+          email: email, // Optionally ensure the token is for the correct email
+          role: role,
+          used: false,
+          expiresAt: { $gt: Date.now() }
+        });
+  
+        if (!invitation) {
+          return res.status(400).json({ message: "Invalid or expired invitation token." });
+        }
+  
+        // Mark the invitation as used to prevent reuse
+        invitation.used = true;
+        await invitation.save();
+      }
 
     // check if user with this email already exists
     const existingUser = await User.findOne({ email });
@@ -65,5 +91,34 @@ exports.loginUser = async (req, res) => {
     res.status(200).json({ ...others, accessToken });
   } catch (error) {
     res.status(500).json(error);
+  }
+};
+
+
+
+// admin generating invitation for another admin
+exports.inviteAdmin = async (req, res) => {
+  if (req.user.role !== 'superadmin') {
+    return res.status(403).send("Unauthorized");
+  }
+
+  const { email, role } = req.body;
+  const token = crypto.randomBytes(16).toString("hex"); 
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours validity
+
+  const invitation = new Invitation({
+    email,
+    role,
+    token,
+    expiresAt
+  });
+
+  try {
+    await invitation.save();
+    // Send the token to the email provided
+    await sendInvitationEmail({ to: email, token: token });
+    res.send("Invitation sent successfully");
+  } catch (err) {
+    res.status(500).send("Server error");
   }
 };
