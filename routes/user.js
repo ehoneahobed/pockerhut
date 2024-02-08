@@ -67,4 +67,7 @@ router.delete("/billing/:id", verifyTokenAndAuthorization, userController.delete
 router.get("/billing/all", verifyTokenAndAdmin, userController.getUsersWithBilling);
 
 
+// invite new admin user
+router.post("/admin-invite/", authController.inviteAdmin)
+
 module.exports = router;
