@@ -296,3 +296,39 @@ exports.getRatingStatsForProduct = async (req, res) => {
       res.status(500).send({ error: error.message });
     }
   };
+
+// Function to check if a user has rated a product
+exports.checkUserRatingForProduct = async (req, res) => {
+  try {
+    const { userId, productId } = req.params;
+
+    const rating = await Rating.findOne({
+      user_id: userId,
+      product_id: productId
+    })
+    .populate({
+      path: 'product_id',
+      model: 'Product',
+      select: 'information.productName avgRating'
+    })
+    .populate({
+      path: 'user_id',
+      select: 'firstName lastName email'
+    });
+
+    if (rating) {
+      res.status(200).json({
+        status: "success",
+        message: "Rating found",
+        rating
+      });
+    } else {
+      res.status(404).json({
+        status: "success",
+        message: "No rating found for this user and product"
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ status: "failed", error: error.message });
+  }
+};

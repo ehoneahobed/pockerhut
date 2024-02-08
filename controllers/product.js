@@ -385,6 +385,8 @@ exports.getProductsByVendor = async (req, res) => {
     try {
         const products = await Product.find({ vendor: req.params.vendorId })
             .populate('vendor', '-sellerAccountInformation.password') // Add this line to populate vendor details
+            .populate('information.category', 'name description')
+            .populate('information.subcategory', 'name description') 
             .exec(); // Executes the query
         
             if (!products.length) {

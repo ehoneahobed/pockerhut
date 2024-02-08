@@ -27,4 +27,9 @@ router.get("/products/:productId/rating-stats", ratingController.getRatingStatsF
 // Route for getting all rating details for a product
 router.get("/products/:productId/details", ratingController.getProductRatingDetails);
 
+
+// Route to check if a user has rated a product
+router.get("/check-rating/user/:userId/product/:productId", ratingController.checkUserRatingForProduct);
+
+
 module.exports = router;
