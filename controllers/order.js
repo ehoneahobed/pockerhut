@@ -24,7 +24,7 @@ const Product = require("../models/Product");
 
 // create new order
 exports.createOrder = async (req, res) => {
-    const { customer, productDetails, subtotal, deliveryFee, tax, totalAmount, billingInformation } = req.body;
+    const { customer, productDetails, subtotal, deliveryFee, tax, totalAmount, billingInformation, orderNotes } = req.body;
 
     // Validate product details
     if (!productDetails || productDetails.length === 0) {
@@ -37,13 +37,14 @@ exports.createOrder = async (req, res) => {
             productDetails: productDetails.map(pd => ({
                 ...pd,
                 deliveryOption: pd.deliveryOption,
-                pickupAddress: pd.deliveryOption === 'pickup' ? pd.pickupAddress : undefined
+                pickupAddress: pd.deliveryOption === 'pickup' ? pd.pickupAddress : undefined,
+                orderNotes: pd.orderNotes
             })),
             subtotal,
             deliveryFee,
             tax,
             totalAmount,
-            billingInformation
+            billingInformation,
         });
 
         order = await order.save();

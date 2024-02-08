@@ -107,6 +107,9 @@ const ProductDetailSchema = new Schema({
   pickupAddress: {
     type: String,
     required: function() { return this.deliveryOption === 'pickup'; }
+  },
+  orderNotes: {
+    type: String,
   }
 });
 
