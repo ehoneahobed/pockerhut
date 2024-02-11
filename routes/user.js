@@ -68,6 +68,6 @@ router.get("/billing/all", verifyTokenAndAdmin, userController.getUsersWithBilli
 
 
 // invite new admin user
-router.post("/admin-invite/", authController.inviteAdmin)
+router.post("/admin-invite/", verifyTokenAndSuperAdmin, authController.inviteAdmin)
 
 module.exports = router;
