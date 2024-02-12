@@ -76,4 +76,7 @@ router.get("/billing/all", verifyTokenAndAdmin, userController.getUsersWithBilli
 // invite new admin user
 router.post("/admin-invite/", verifyTokenAndSuperAdmin, authController.inviteAdmin)
 
+// revoke or grant access to user - admins & superadmins
+router.put('/update-access/:id', verifyTokenAndSuperAdmin, userController.updateAccessRevocation);
+
 module.exports = router;
