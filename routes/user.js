@@ -10,6 +10,9 @@ const {
 const authController = require("../controllers/auth");
 const userController = require("../controllers/users");
 
+// get admins and superadmin (only superadmin can)
+router.get("/admin",  verifyTokenAndSuperAdmin,  userController.getAdminUsers);
+
 // create new user
 router.post("/signup", authController.registerUser);
 
@@ -22,14 +25,17 @@ router.put("/:id", verifyTokenAndAuthorization, userController.updateUser);
 // delete user
 router.delete("/:id", verifyTokenAndAuthorization, userController.deleteUser);
 
+
+
 // get a single user
 router.get("/:id", verifyTokenAndAuthorization, userController.getUser);
+
+
 
 // get all users (only admins can)
 router.get("/", verifyTokenAndAdmin, userController.getUsers);
 
-// get admins and superadmin (only superadmin can)
-router.get("/admin",   verifyTokenAndSuperAdmin, userController.getAdminUsers);
+
 
 // Request password reset email
 router.post('/request-reset-password', userController.sendPasswordResetEmail);
@@ -69,5 +75,8 @@ router.get("/billing/all", verifyTokenAndAdmin, userController.getUsersWithBilli
 
 // invite new admin user
 router.post("/admin-invite/", verifyTokenAndSuperAdmin, authController.inviteAdmin)
+
+// revoke or grant access to user - admins & superadmins
+router.put('/update-access/:id', verifyTokenAndSuperAdmin, userController.updateAccessRevocation);
 
 module.exports = router;

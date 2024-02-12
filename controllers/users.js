@@ -161,6 +161,34 @@ exports.resetPassword = async (req, res) => {
   res.status(200).json({ message: "Password has been reset." });
 };
 
+// revoke or grant access
+exports.updateAccessRevocation = async (req, res) => {
+  const userId = req.params.id; // User ID from URL parameter
+  const { isAccessRevoked } = req.body; // New access status from the request body
+
+  if (typeof isAccessRevoked !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid request format.' });
+  }
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { isAccessRevoked: isAccessRevoked } },
+      { new: true, runValidators: true }
+    ).select('-password'); // Exclude password from the result
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Return a success response
+    res.status(200).json({ message: 'User access updated successfully.', user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user access.', error: error.toString() });
+  }
+};
+
+
 // create user billing
 // exports.createBilling = async (req, res) => {
 //     try {
