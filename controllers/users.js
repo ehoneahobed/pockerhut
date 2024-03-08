@@ -124,16 +124,18 @@ exports.sendPasswordResetEmail = async (req, res) => {
     user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
     await user.save();
 
+    const resetLink = `${process.env.FRONTEND_BASE_URL}/reset-password/${token}`;
     const emailOptions = {
       to: user.email,
       subject: "Password Reset",
-      text: `To reset your password, click the following link: ${process.env.FRONTEND_BASE_URL}/reset-password/${token}`,
-      
+      text: `To reset your password, click the following link: ${resetLink}`,
+      html: `<p>To reset your password, click the following link: <a href="${resetLink}">Reset Password</a></p>`,
     };
 
-    console.log({ emailOptions });
+    // console.log({ emailOptions });
 
-    await emailService.sendEmail(emailOptions);
+    await emailService.sendEmailWithMailerSend(emailOptions);
+    // await emailService.sendEmail(emailOptions);
     res.status(200).json({ message: "Password reset email sent." });
   } catch (error) {
     console.error(error);
