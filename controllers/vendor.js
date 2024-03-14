@@ -559,10 +559,11 @@ exports.sendPasswordResetEmail = async (req, res) => {
     user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
     await user.save();
 
+    const resetLink = `${process.env.FRONTEND_BASE_URL}/vendor/reset-password/${token}`;
     const emailOptions = {
       to: user.email,
       subject: "Password Reset",
-      text: `To reset your password, click the following link: https://pokerhut-dev.vercel.app/vendor/reset-password/${token}`,
+      text: `To reset your password, click the following link: ${resetLink}`,
       
     };
 
