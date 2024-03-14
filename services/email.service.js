@@ -73,7 +73,7 @@ const mailerSend = new MailerSend({
 
 async function sendEmailWithMailerSend({ to, subject, text, html }) {
   console.log(`${to} ${subject}`);
-  const recipients = [new Recipient("support.team@porkerhut.com", to)]; // Assuming 'to' is the email address
+  const recipients = [new Recipient(to, to)]; // Assuming 'to' is the email address
 
   // Correctly initialize the EmailParams object
   let emailParams = new EmailParams()

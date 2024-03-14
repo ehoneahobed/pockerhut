@@ -8,6 +8,7 @@ const {
   verifyToken,
 } = require("../controllers/verifyToken");
 
+
 // Create Vendor
 router.post("/", uploadVendorFiles, uploadVendorFilesToCloudinary,  vendorController.createVendor);
 
@@ -16,6 +17,14 @@ router.post("/login", vendorController.loginVendor);
 
 // Update Vendor
 router.put("/:vendorId", uploadVendorFiles, uploadVendorFilesToCloudinary, vendorController.updateVendor);
+
+// update store status for a given vendor
+router.put(
+  "/:vendorId/status",
+  verifyTokenAndAdmin,
+  vendorController.updateVendorStatus
+);
+
 
 // Delete Vendor
 router.delete(
@@ -29,6 +38,8 @@ router.get("/:id", verifyTokenAndAuthorization, vendorController.getVendor);
 // Get all vendors
 router.get("/", verifyTokenAndAdmin, vendorController.getAllVendors);
 
+
+
 // Get vendors by store status
 router.get(
   "/status",
@@ -36,12 +47,7 @@ router.get(
   vendorController.getVendorsByStoreStatus
 );
 
-// update store status for a given vendor
-router.put(
-  ":vendorId/status",
-  verifyTokenAndAdmin,
-  vendorController.updateVendorStatus
-);
+
 
 
 // Request password reset email
