@@ -31,6 +31,9 @@ router.delete("/:id", verifyTokenAndAuthorization, userController.deleteUser);
 router.get("/:id", verifyTokenAndAuthorization, userController.getUser);
 
 
+// get all users with aggregate data
+router.get("/user-details/:userId", verifyTokenAndAuthorization, userController.getUserDetails);
+
 
 // get all users (only admins can)
 router.get("/", verifyTokenAndAdmin, userController.getUsers);

@@ -390,7 +390,16 @@ exports.getOrdersByVendor = async (req, res) => {
 //   get all orders
 exports.getAllOrders = async (req, res) => {
     try {
-        const orders = await Order.find({});
+        const orders = await Order.find({})
+        .populate({
+            path: 'productDetails.productID', // Populates product information in productDetails
+            populate: {
+                path: 'vendor', // Further populates vendor information within each product
+                model: 'Vendor' // Specify the model for vendor population
+            }
+        })
+        .populate('productDetails.vendor', 'Vendor'); // Populates vendor information directly referenced in productDetails
+        
         res.status(200).json({
             success: true,
             count: orders.length,
