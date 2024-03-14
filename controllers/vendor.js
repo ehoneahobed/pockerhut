@@ -3,6 +3,8 @@ const VendorAccount = require("../models/VendorAccount");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const jwt = require("jsonwebtoken");
+const crypto = require('crypto');
+const emailService = require("../services/email.service");
 
 // Create Vendor
 // exports.createVendor = async (req, res) => {
@@ -556,13 +558,13 @@ exports.sendPasswordResetEmail = async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
-    user.resetToken = token;
-    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
-    await user.save();
+    vendor.resetToken = token;
+    vendor.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
+    await vendor.save();
 
     const resetLink = `${process.env.FRONTEND_BASE_URL}/vendor/reset-password/${token}`;
     const emailOptions = {
-      to: user.email,
+      to: vendor.sellerAccountInformation.email,
       subject: "Password Reset",
       text: `To reset your password, click the following link: ${resetLink}`,
       
