@@ -51,7 +51,7 @@ exports.getUser = async (req, res) => {
 // get all users
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().populate('billingInfo');
 
     // sanitize users and remove their passwords
     const sanitizedUsers = users.map((user) => {
