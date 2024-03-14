@@ -1,7 +1,10 @@
 const Vendor = require("../models/Vendor");
+const VendorAccount = require("../models/VendorAccount");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const jwt = require("jsonwebtoken");
+const crypto = require('crypto');
+const emailService = require("../services/email.service");
 
 // Create Vendor
 // exports.createVendor = async (req, res) => {
@@ -555,13 +558,13 @@ exports.sendPasswordResetEmail = async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
-    user.resetToken = token;
-    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
-    await user.save();
+    vendor.resetToken = token;
+    vendor.resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
+    await vendor.save();
 
     const resetLink = `${process.env.FRONTEND_BASE_URL}/vendor/reset-password/${token}`;
     const emailOptions = {
-      to: user.email,
+      to: vendor.sellerAccountInformation.email,
       subject: "Password Reset",
       text: `To reset your password, click the following link: ${resetLink}`,
       
@@ -595,4 +598,40 @@ exports.resetPassword = async (req, res) => {
   await user.save();
 
   res.status(200).json({ message: "Password has been reset." });
+};
+
+
+exports.getAllVendorAccounts = async (req, res) => {
+  try {
+    const vendorAccountsAggregated = await VendorAccount.aggregate([
+      {
+        $lookup: {
+          from: "orders", // the collection to join
+          localField: "orderId", // field from the input documents
+          foreignField: "_id", // field from the documents of the "from" collection
+          as: "orderDetails" // array field in the input document
+        }
+      },
+      {
+        $unwind: "$orderDetails" // Deconstructs the array field from the input document to output a document for each element
+      },
+      {
+        $group: {
+          _id: "$vendorId",
+          totalOrders: { $sum: 1 },
+          totalFailedOrders: {
+            $sum: {
+              $cond: [{ $eq: ["$orderDetails.status", "failed"] }, 1, 0]
+            }
+          },
+          // You can add more metrics here as needed
+        }
+      }
+    ]);
+
+    if (!vendorAccountsAggregated.length) return res.status(404).send("No vendor accounts data found.");
+    res.send(vendorAccountsAggregated);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 };

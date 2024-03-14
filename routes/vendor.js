@@ -32,8 +32,14 @@ router.delete(
   vendorController.deleteVendor
 );
 
+// Get all vendorAccounts and summaries
+router.get("/vendor-accounts", vendorController.getAllVendorAccounts);
+
+
 // Get a vendor
 router.get("/:id", verifyTokenAndAuthorization, vendorController.getVendor);
+
+
 
 // Get all vendors
 router.get("/", verifyTokenAndAdmin, vendorController.getAllVendors);

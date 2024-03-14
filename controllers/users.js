@@ -51,7 +51,7 @@ exports.getUser = async (req, res) => {
 // get all users
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().populate('billingInfo');
 
     // sanitize users and remove their passwords
     const sanitizedUsers = users.map((user) => {
@@ -64,6 +64,48 @@ exports.getUsers = async (req, res) => {
     res.status(500).json(error);
   }
 };
+
+// get aggregate data about all users
+exports.getUserDetails = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Find the user by userId
+    const user = await User.findById(userId).populate('billingInfo');
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Aggregate orders data for the user
+    const ordersAggregate = await Order.aggregate([
+      { $match: { user: mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: "$user",
+          numberOfOrders: { $sum: 1 },
+          totalAmountSpent: { $sum: "$totalAmount" },
+        }
+      }
+    ]);
+
+    // Simplify the orders data (assuming there's only one result per user)
+    const ordersData = ordersAggregate.length ? ordersAggregate[0] : { numberOfOrders: 0, totalAmountSpent: 0 };
+
+    // Prepare the user data response
+    const userData = {
+      city: user.billingInfo.length ? user.billingInfo[0].city : null, // Assuming the first billingInfo contains the city
+      phoneNumber: user.billingInfo.length ? user.billingInfo[0].phoneNumber : null, // Assuming the first billingInfo contains the phone number
+      ...ordersData, // Spread operator to include orders data
+      status: user.isAccessRevoked ? "deactivated" : "active"
+    };
+
+    res.status(200).json(userData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred while fetching user details", error });
+  }
+};
+
 
 // get admin users
 exports.getAdminUsers = async (req, res) => {
