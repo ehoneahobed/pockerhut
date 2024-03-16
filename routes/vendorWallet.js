@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const vendorWalletController = require('../controllers/vendorWalletController');
+const vendorWalletController = require('../controllers/vendorWallet');
 
 // Create new vendor wallet
 router.post('/', vendorWalletController.createVendorWallet);

@@ -8,6 +8,8 @@ const app = express();
 const userRoute = require('./routes/user');
 const productRoutes = require('./routes/product');
 const vendorRoutes = require('./routes/vendor');
+const vendorAccountRoutes = require('./routes/vendorAccount');
+const vendorWalletRoutes = require('./routes/vendorWallet');
 const blogRoutes = require("./routes/blog");
 const categoryRoutes = require("./routes/categories");
 const subcategoryRoutes = require("./routes/subcategories");
@@ -46,6 +48,8 @@ app.use(express.json()); // middleware that allows the sending and receiving of 
 app.use('/api/user', userRoute);
 app.use('/api/products', productRoutes);
 app.use('/api/vendors', vendorRoutes);
+app.use('/api/vendorAccount', vendorAccountRoutes);
+app.use('/api/vendorWallet', vendorWalletRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
