@@ -1,3 +1,5 @@
+const VendorWallet = require('../models/VendorWallet');
+
 // Create new vendor wallet
 exports.createVendorWallet = async (req, res) => {
     try {

@@ -17,7 +17,7 @@ const announcementSchema = new Schema({
   },
   endDate: {
     type: Date,
-    required: true,
+    // required: true,
   },
 });
 
