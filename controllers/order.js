@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const mongoose = require("mongoose");
 
 // create new order
 // exports.createOrder = async (req, res) => {
@@ -461,5 +462,293 @@ exports.getOrderById = async (req, res) => {
     } catch (error) {
         console.error(error.message);
         res.status(500).send({ message: "Server Error" });
+    }
+};
+
+
+// get aggregated order data for a specific user
+exports.getAggregatedOrdersByUser = async (req, res) => {
+    const userId = req.params.userId;
+
+    try {
+        const aggregation = await Order.aggregate([
+            { $match: { customer: mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
+                    count: { $sum: 1 },
+                    totalAmount: { $sum: "$totalAmount" },
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.customer",
+                    totalOrders: { $sum: "$count" },
+                    ordersByStatus: { 
+                        $push: { 
+                            status: "$_id.status", 
+                            count: "$count",
+                            isPaid: "$_id.isPaid"
+                        } 
+                    },
+                    totalAmountSpent: { 
+                        $sum: { 
+                            $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0] 
+                        } 
+                    },
+                    totalPaidOrders: {
+                        $sum: { 
+                            $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0] 
+                        } 
+                    }
+                }
+            },
+            { $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "_id",
+                as: "userData"
+            }},
+            { $unwind: "$userData" },
+            {
+                $project: {
+                    totalOrders: 1,
+                    ordersByStatus: 1,
+                    totalAmountSpent: 1,
+                    totalPaidOrders: 1,
+                    userData: { 
+                        firstName: 1, 
+                        lastName: 1, 
+                        email: 1, 
+                        createdAt: 1, 
+                        updatedAt: 1, 
+                        role: 1, 
+                        isAccessRevoked: 1 // Include isAccessRevoked field
+                    }
+                }
+            },
+        ]);
+
+        if (!aggregation || aggregation.length === 0) {
+            return res.status(404).json({ message: "No order data found for the specified user." });
+        }
+
+        res.json(aggregation[0]);
+    } catch (error) {
+        console.error("Error fetching aggregated order data:", error);
+        res.status(500).json({ message: "Server error occurred while fetching aggregated order data." });
+    }
+};
+
+// agggregated order data for vendors
+exports.getAggregatedDataForVendor = async (req, res) => {
+    const vendorId = mongoose.Types.ObjectId(req.params.vendorId);
+
+    try {
+        const aggregation = await Order.aggregate([
+            { $unwind: "$productDetails" },
+            { $match: { "productDetails.vendor": vendorId } },
+            {
+                $group: {
+                    _id: {
+                        status: "$status",
+                        isPaid: "$isPaid",
+                        vendor: "$productDetails.vendor"
+                    },
+                    count: { $sum: 1 },
+                    totalSalesAmount: { $sum: "$productDetails.totalPrice" },
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.vendor",
+                    ordersDetails: {
+                        $push: {
+                            status: "$_id.status",
+                            isPaid: "$_id.isPaid",
+                            count: "$count",
+                            totalSalesAmount: "$totalSalesAmount",
+                        }
+                    },
+                    totalOrders: { $sum: "$count" },
+                    totalSalesAmount: { $sum: "$totalSalesAmount" },
+                }
+            },
+            {
+                $lookup: {
+                    from: "vendors", // Ensure this matches your actual vendors collection name
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "vendorDetails"
+                }
+            },
+            { $unwind: "$vendorDetails" }, // Assuming each order will have one matching vendor
+            {
+                $project: {
+                    totalOrders: 1,
+                    totalSalesAmount: 1,
+                    ordersDetails: 1,
+                    vendorDetails: {
+                        "sellerAccountInformation.shopName": 1,
+                        "sellerAccountInformation.entityType": 1,
+                        "sellerAccountInformation.accountOwnersName": 1,
+                        "sellerAccountInformation.email": 1,
+                        "sellerAccountInformation.phoneNumber": 1,
+                        "sellerAccountInformation.additionalPhoneNumber": 1,
+                        // Notice how we simply don't mention the password field at all
+                        // "businessInformation": 1,
+                        "storeStatus": 1,
+                        "vendorBankAccount": 1,
+                        "profilePhoto": 1,
+                        "pickupAddresses": 1
+                    }
+                }
+            }
+            
+        ]);
+
+        if (aggregation.length === 0) {
+            return res.status(404).json({ message: "No aggregated data found for the specified vendor." });
+        }
+
+        res.json(aggregation[0]); // Assuming there's at least one document returned
+    } catch (error) {
+        console.error("Error fetching aggregated data for vendor:", error);
+        res.status(500).json({ message: "Server error occurred while fetching aggregated data for vendor." });
+    }
+};
+
+
+
+// getting aggregated data for admin overvview page
+exports.getAdminOverview = async (req, res) => {
+    const { startDate, endDate } = req.params;
+
+    // Calculate the difference in days for averaging
+    const diffInTime = new Date(endDate).getTime() - new Date(startDate).getTime();
+    const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
+
+    const matchStage = {
+        $match: {
+            orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        }
+    };
+
+    const groupStage = {
+        $group: {
+            _id: null,
+            totalSales: { $sum: "$totalAmount" },
+            totalItemsSold: { $sum: { $size: "$productDetails" } },
+            averageOrderValue: { $avg: "$totalAmount" },
+            totalOrders: { $sum: 1 },
+            totalPendingOrders: { 
+                $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+            },
+            totalFulfilledOrders: { 
+                $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] }
+            },
+            totalFailedOrders: { $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] } },
+            totalReadyToGoOrders: { $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] } },
+            totalCompletedOrders: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+            totalReturnedOrders: { $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] } },
+        }
+    };
+
+    const projectStage = {
+        $project: {
+            _id: 0,
+            totalSales: 1,
+            totalItemsSold: 1,
+            averageOrderValue: 1,
+            totalOrders: 1,
+            averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
+            averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
+            totalPendingOrders: 1,
+            totalFulfilledOrders: 1,
+            totalFailedOrders: 1,
+            totalReadyToGoOrders: 1,
+            totalCompletedOrders: 1,
+            totalReturnedOrders: 1
+        }
+    };
+
+    try {
+        const ordersOverview = await Order.aggregate([matchStage, groupStage, projectStage]);
+        if (ordersOverview.length > 0) {
+            res.json(ordersOverview[0]);
+        } else {
+            res.status(404).json({ message: "No orders found in the given date range." });
+        }
+    } catch (error) {
+        console.error("Error fetching admin overview data:", error);
+        res.status(500).json({ message: "Server error occurred while fetching admin overview data." });
+    }
+};
+
+exports.getWeeklySalesOverview = async (req, res) => {
+    const { startDate, endDate } = req.params;
+
+    // Match orders within the specified date range
+    const matchStage = {
+        $match: {
+            orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        }
+    };
+
+    // Group by day of week to calculate daily sales and counts
+    const dailyGroupStage = {
+        $group: {
+            _id: { $dayOfWeek: "$orderDate" },
+            dailySalesPaid: { $sum: { $cond: ["$isPaid", "$totalAmount", 0] } },
+            countPaid: { $sum: { $cond: ["$isPaid", 1, 0] } },
+            dailySalesNotPaid: { $sum: { $cond: [{ $not: "$isPaid" }, "$totalAmount", 0] } },
+            countNotPaid: { $sum: { $cond: [{ $not: "$isPaid" }, 1, 0] } }
+        }
+    };
+
+    // Sort by day of the week
+    const sortStage = { $sort: { "_id": 1 } };
+
+    // Project the final structure for daily overview
+    const dailyProjectStage = {
+        $project: {
+            _id: 0,
+            dayOfWeek: { $arrayElemAt: [["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], { $subtract: ["$_id", 1] }] },
+            dailySalesPaid: 1,
+            countPaid: 1,
+            dailySalesNotPaid: 1,
+            countNotPaid: 1
+        }
+    };
+
+    // Facet to separate daily overview and summary
+    const facetStage = {
+        $facet: {
+            dailyOverview: [dailyProjectStage], // Use the projected daily overview structure
+            summary: [ // Calculate the summary
+                { $group: {
+                    _id: null,
+                    totalOrders: { $sum: { $add: ["$countPaid", "$countNotPaid"] } },
+                    totalPaidOrders: { $sum: "$countPaid" },
+                    totalUnpaidOrders: { $sum: "$countNotPaid" },
+                    totalSalesPaid: { $sum: "$dailySalesPaid" },
+                    totalSalesNotPaid: { $sum: "$dailySalesNotPaid" }
+                }},
+                { $project: { _id: 0 } }
+            ]
+        }
+    };
+
+    try {
+        const [result] = await Order.aggregate([matchStage, dailyGroupStage, sortStage, facetStage]);
+        // Combine daily overview and summary for response
+        const response = {
+            dailyOverview: result.dailyOverview,
+            summary: result.summary[0]
+        };
+        res.json({ weeklySalesOverview: response });
+    } catch (error) {
+        console.error("Error fetching weekly sales overview:", error);
+        res.status(500).json({ message: "Server error occurred while fetching weekly sales overview." });
     }
 };

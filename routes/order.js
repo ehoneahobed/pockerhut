@@ -39,4 +39,18 @@ router.get("/:id", orderController.getOrderById);
 router.get("/:orderId/vendor/:vendorId/products", orderController.getProductsByVendorInOrder);
 
 
+// Get aggregated order data for a specific user
+router.get("/aggregate/user/:userId", orderController.getAggregatedOrdersByUser);
+
+// Get aggregated order data for a specific vendor
+router.get("/aggregate/vendor/:vendorId", orderController.getAggregatedDataForVendor);
+
+// getting aggregated data for admin dashboard overview page
+
+// Admin dashboard overview route
+router.get("/admin/overview/:startDate/:endDate", orderController.getAdminOverview);
+
+// Weekly sales overview route
+router.get("/admin/weekly-sales/:startDate/:endDate", orderController.getWeeklySalesOverview);
+
 module.exports = router;
