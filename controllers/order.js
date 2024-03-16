@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const mongoose = require("mongoose");
 
 // create new order
 // exports.createOrder = async (req, res) => {
@@ -461,5 +462,158 @@ exports.getOrderById = async (req, res) => {
     } catch (error) {
         console.error(error.message);
         res.status(500).send({ message: "Server Error" });
+    }
+};
+
+
+// get aggregated order data for a specific user
+exports.getAggregatedOrdersByUser = async (req, res) => {
+    const userId = req.params.userId;
+
+    try {
+        const aggregation = await Order.aggregate([
+            { $match: { customer: mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
+                    count: { $sum: 1 },
+                    totalAmount: { $sum: "$totalAmount" },
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.customer",
+                    totalOrders: { $sum: "$count" },
+                    ordersByStatus: { 
+                        $push: { 
+                            status: "$_id.status", 
+                            count: "$count",
+                            isPaid: "$_id.isPaid"
+                        } 
+                    },
+                    totalAmountSpent: { 
+                        $sum: { 
+                            $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0] 
+                        } 
+                    },
+                    totalPaidOrders: {
+                        $sum: { 
+                            $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0] 
+                        } 
+                    }
+                }
+            },
+            { $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "_id",
+                as: "userData"
+            }},
+            { $unwind: "$userData" },
+            {
+                $project: {
+                    totalOrders: 1,
+                    ordersByStatus: 1,
+                    totalAmountSpent: 1,
+                    totalPaidOrders: 1,
+                    userData: { 
+                        firstName: 1, 
+                        lastName: 1, 
+                        email: 1, 
+                        createdAt: 1, 
+                        updatedAt: 1, 
+                        role: 1, 
+                        isAccessRevoked: 1 // Include isAccessRevoked field
+                    }
+                }
+            },
+        ]);
+
+        if (!aggregation || aggregation.length === 0) {
+            return res.status(404).json({ message: "No order data found for the specified user." });
+        }
+
+        res.json(aggregation[0]);
+    } catch (error) {
+        console.error("Error fetching aggregated order data:", error);
+        res.status(500).json({ message: "Server error occurred while fetching aggregated order data." });
+    }
+};
+
+// agggregated order data for vendors
+exports.getAggregatedDataForVendor = async (req, res) => {
+    const vendorId = mongoose.Types.ObjectId(req.params.vendorId);
+
+    try {
+        const aggregation = await Order.aggregate([
+            { $unwind: "$productDetails" },
+            { $match: { "productDetails.vendor": vendorId } },
+            {
+                $group: {
+                    _id: {
+                        status: "$status",
+                        isPaid: "$isPaid",
+                        vendor: "$productDetails.vendor"
+                    },
+                    count: { $sum: 1 },
+                    totalSalesAmount: { $sum: "$productDetails.totalPrice" },
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.vendor",
+                    ordersDetails: {
+                        $push: {
+                            status: "$_id.status",
+                            isPaid: "$_id.isPaid",
+                            count: "$count",
+                            totalSalesAmount: "$totalSalesAmount",
+                        }
+                    },
+                    totalOrders: { $sum: "$count" },
+                    totalSalesAmount: { $sum: "$totalSalesAmount" },
+                }
+            },
+            {
+                $lookup: {
+                    from: "vendors", // Ensure this matches your actual vendors collection name
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "vendorDetails"
+                }
+            },
+            { $unwind: "$vendorDetails" }, // Assuming each order will have one matching vendor
+            {
+                $project: {
+                    totalOrders: 1,
+                    totalSalesAmount: 1,
+                    ordersDetails: 1,
+                    vendorDetails: {
+                        "sellerAccountInformation.shopName": 1,
+                        "sellerAccountInformation.entityType": 1,
+                        "sellerAccountInformation.accountOwnersName": 1,
+                        "sellerAccountInformation.email": 1,
+                        "sellerAccountInformation.phoneNumber": 1,
+                        "sellerAccountInformation.additionalPhoneNumber": 1,
+                        // Notice how we simply don't mention the password field at all
+                        // "businessInformation": 1,
+                        "storeStatus": 1,
+                        "vendorBankAccount": 1,
+                        "profilePhoto": 1,
+                        "pickupAddresses": 1
+                    }
+                }
+            }
+            
+        ]);
+
+        if (aggregation.length === 0) {
+            return res.status(404).json({ message: "No aggregated data found for the specified vendor." });
+        }
+
+        res.json(aggregation[0]); // Assuming there's at least one document returned
+    } catch (error) {
+        console.error("Error fetching aggregated data for vendor:", error);
+        res.status(500).json({ message: "Server error occurred while fetching aggregated data for vendor." });
     }
 };
