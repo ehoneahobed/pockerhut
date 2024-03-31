@@ -45,6 +45,9 @@ router.get("/aggregate/user/:userId", orderController.getAggregatedOrdersByUser)
 // Get aggregated order data for a specific vendor
 router.get("/aggregate/vendor/:vendorId", orderController.getAggregatedDataForVendor);
 
+// Get aggregated order data for all vendors
+router.get("/aggregate/vendors", orderController.getAggregatedDataForAllVendors );
+
 // getting aggregated data for admin dashboard overview page
 
 // Admin dashboard overview route
