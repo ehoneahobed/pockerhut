@@ -594,6 +594,81 @@ exports.getAggregatedOrdersByUser = async (req, res) => {
   }
 };
 
+// Get aggregated order data for all users
+exports.getAggregatedOrdersByAllUsers = async (req, res) => {
+    try {
+      const aggregation = await Order.aggregate([
+        {
+          $group: {
+            _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
+            count: { $sum: 1 },
+            totalAmount: { $sum: "$totalAmount" },
+          }
+        },
+        {
+          $group: {
+            _id: "$_id.customer",
+            totalOrders: { $sum: "$count" },
+            ordersByStatus: {
+              $push: {
+                status: "$_id.status",
+                count: "$count",
+                isPaid: "$_id.isPaid",
+              }
+            },
+            totalAmountSpent: {
+              $sum: {
+                $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0]
+              }
+            },
+            totalPaidOrders: {
+              $sum: {
+                $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0]
+              }
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "userData"
+          }
+        },
+        { $unwind: "$userData" },
+        {
+          $project: {
+            totalOrders: 1,
+            ordersByStatus: 1,
+            totalAmountSpent: 1,
+            totalPaidOrders: 1,
+            userData: {
+              firstName: 1,
+              lastName: 1,
+              email: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              role: 1,
+              isAccessRevoked: 1 // Include isAccessRevoked field
+            }
+          }
+        }
+      ]);
+  
+      if (aggregation.length === 0) {
+        return res.status(404).json({ message: "No aggregated data found." });
+      }
+  
+      res.json(aggregation);
+    } catch (error) {
+      console.error("Error fetching aggregated order data for all users:", error);
+      res.status(500).json({ message: "Server error occurred while fetching aggregated data for all users." });
+    }
+  };
+  
+
+
 // agggregated order data for a single vendor
 exports.getAggregatedDataForVendor = async (req, res) => {
   const vendorId = mongoose.Types.ObjectId(req.params.vendorId);
