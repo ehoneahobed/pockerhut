@@ -46,6 +46,10 @@ const VendorSchema = new Schema({
   resetToken: { type: String },
   resetTokenExpiration: { type: Date },
   pickupAddresses: [String],
-});
+}, {
+  timestamps: true
+}
+
+);
 
 module.exports = mongoose.model("Vendor", VendorSchema);
