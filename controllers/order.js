@@ -931,6 +931,7 @@ exports.getAllAdminOverview = async (req, res) => {
     new Date(endDate).getTime() - new Date(startDate).getTime();
   const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
 
+  try {
   const matchStage = {
     $match: {
       orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
@@ -939,7 +940,11 @@ exports.getAllAdminOverview = async (req, res) => {
 
   const groupStage = {
     $group: {
-      _id: null,
+      _id: {
+        year: { $year: "$orderDate" },
+        month: { $month: "$orderDate" }
+    },
+    overViewDate: { $first: "$orderDate" },
       totalSales: { $sum: "$totalAmount" },
       totalItemsSold: { $sum: { $size: "$productDetails" } },
       averageOrderValue: { $avg: "$totalAmount" },
@@ -965,6 +970,12 @@ exports.getAllAdminOverview = async (req, res) => {
     },
   };
 
+  const sortStage = {
+    $sort: {
+        overViewDate: -1 // Use 1 for ascending order or -1 for descending order
+    }
+};
+
   const projectStage = {
     $project: {
       _id: 0,
@@ -980,17 +991,24 @@ exports.getAllAdminOverview = async (req, res) => {
       totalReadyToGoOrders: 1,
       totalCompletedOrders: 1,
       totalReturnedOrders: 1,
+      overViewDate: {
+        $dateToString: { format: "%Y-%m", date: "$overViewDate" } // Formatting to Year-Month
+    },
     },
   };
 
-  try {
+  
     const ordersOverview = await Order.aggregate([
       matchStage,
       groupStage,
+      sortStage,
       projectStage,
     ]);
+
+    // console.log(ordersOverview);
+
     if (ordersOverview.length > 0) {
-      res.json(ordersOverview[0]);
+      res.json(ordersOverview);
     } else {
       res
         .status(404)
