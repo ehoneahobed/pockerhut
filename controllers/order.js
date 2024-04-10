@@ -918,6 +918,95 @@ exports.getAdminOverview = async (req, res) => {
   }
 };
 
+// getting aggregated data for admin overview page
+exports.getAllAdminOverview = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate = startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+  // Calculate the difference in days for averaging
+  const diffInTime =
+    new Date(endDate).getTime() - new Date(startDate).getTime();
+  const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
+
+  const matchStage = {
+    $match: {
+      orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+    },
+  };
+
+  const groupStage = {
+    $group: {
+      _id: null,
+      totalSales: { $sum: "$totalAmount" },
+      totalItemsSold: { $sum: { $size: "$productDetails" } },
+      averageOrderValue: { $avg: "$totalAmount" },
+      totalOrders: { $sum: 1 },
+      totalPendingOrders: {
+        $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+      },
+      totalFulfilledOrders: {
+        $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+      },
+      totalFailedOrders: {
+        $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
+      },
+      totalReadyToGoOrders: {
+        $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
+      },
+      totalCompletedOrders: {
+        $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+      },
+      totalReturnedOrders: {
+        $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
+      },
+    },
+  };
+
+  const projectStage = {
+    $project: {
+      _id: 0,
+      totalSales: 1,
+      totalItemsSold: 1,
+      averageOrderValue: 1,
+      totalOrders: 1,
+      averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
+      averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
+      totalPendingOrders: 1,
+      totalFulfilledOrders: 1,
+      totalFailedOrders: 1,
+      totalReadyToGoOrders: 1,
+      totalCompletedOrders: 1,
+      totalReturnedOrders: 1,
+    },
+  };
+
+  try {
+    const ordersOverview = await Order.aggregate([
+      matchStage,
+      groupStage,
+      projectStage,
+    ]);
+    if (ordersOverview.length > 0) {
+      res.json(ordersOverview[0]);
+    } else {
+      res
+        .status(404)
+        .json({ message: "No orders found in the given date range." });
+    }
+  } catch (error) {
+    console.error("Error fetching admin overview data:", error);
+    res
+      .status(500)
+      .json({
+        message: "Server error occurred while fetching admin overview data.",
+      });
+  }
+
+};
+
 exports.getWeeklySalesOverview = async (req, res) => {
   const { startDate, endDate } = req.params;
 

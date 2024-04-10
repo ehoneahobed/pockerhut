@@ -14,6 +14,12 @@ const agroserviceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    city: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
     subject: {
       type: String,
       required: true,

@@ -1,24 +1,35 @@
 const Blog = require("../models/Blog");
 const Comment = require("../models/Comments");
 const paginateAndSearch = require('../utils/search');
+const slugify = require('slugify');
 
 // create a new blog post
 exports.createBlog = async (req, res) => {
   try {
+
+    const { title, content, featuredImage, slug: providedSlug, author } = req.body;
+    // Generate a slug from the title if no slug is provided, 
+    // otherwise use the provided slug and slugify it as well.
+    const slug = providedSlug ? slugify(providedSlug, { lower: true, strict: true }) : slugify(title, { lower: true, strict: true });
+    
     // Create a new blog
     const blog = new Blog({
-      title: req.body.title,
-      content: req.body.content,
-      featuredImage: req.body.featuredImage,
+      title,
+      content,
+      featuredImage,
+      slug, // Use the generated or provided, slugified slug
       author: req.user.id,
     });
 
+    console.log(blog)
     // Save the blog to the database
     const savedBlog = await blog.save();
+    console.log(savedBlog)
 
     res.status(201).json(savedBlog);
   } catch (error) {
-    res.status(500).json(error);
+    console.error(error);
+    res.status(500).json({ message: "Error creating blog", error: error.message });
   }
 };
 
