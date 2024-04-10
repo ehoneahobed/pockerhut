@@ -1,9 +1,8 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const cloudinary = require('../utils/cloudinary');
+const cloudinary = require("../utils/cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
-
 
 // upload images not more than 2MB in size (to local storage)
 const storage = multer.diskStorage({
@@ -32,7 +31,7 @@ exports.uploadImage = upload.single("featuredImage");
 // upload the image that multer uploaded locally to cloudinary
 exports.uploadLoadedImage = async (req, res, next) => {
   try {
-    console.log(req.file)
+    console.log(req.file);
     // Upload image to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "porkerhut",
@@ -44,14 +43,12 @@ exports.uploadLoadedImage = async (req, res, next) => {
 
     // Call next middleware
     next();
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}
+};
 
 // ******************* END OF FILE UPLOAD FROM LOCAL TO CLOUDINARY ****
-
 
 // ********* START OF DIRECT UPLOAD TO CLOUDINARY THROUGH MEMORY *****
 // Configure Multer to store files in memory
@@ -68,7 +65,10 @@ const fileFilterCloudinary = (req, file, cb) => {
   }
 };
 
-const imageUpload = multer({ storage: imageStorage, fileFilter: fileFilterCloudinary });
+const imageUpload = multer({
+  storage: imageStorage,
+  fileFilter: fileFilterCloudinary,
+});
 
 exports.uploadSingleImage = imageUpload.single("featuredImage");
 
@@ -79,35 +79,33 @@ exports.uploadToCloudinary = async (req, res, next) => {
       throw new Error("No file uploaded");
     }
 
-    console.log({ file: req.file})
+    console.log({ file: req.file });
 
-    const result = await cloudinary.uploader.upload_stream(
-            {
-              folder: "porkerhut",
-              allowed_formats: ["jpg", "jpeg", "png", "svg"]
-            },
-            (error, result) => {
-              if (error) {
-                throw new Error(error);
-              }
-      
-              console.log(result);
-      
-              // Add the Cloudinary URL to the request body
-              req.body.featuredImage = result.secure_url;
-              next();
-            }
-          ).end(req.file.buffer);
+    const result = await cloudinary.uploader
+      .upload_stream(
+        {
+          folder: "porkerhut",
+          allowed_formats: ["jpg", "jpeg", "png", "svg"],
+        },
+        (error, result) => {
+          if (error) {
+            throw new Error(error);
+          }
 
+          console.log(result);
 
+          // Add the Cloudinary URL to the request body
+          req.body.featuredImage = result.secure_url;
+          next();
+        }
+      )
+      .end(req.file.buffer);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
 // ****************** END OF UPLOAD TO CLOUDINARY DIRECTLY **************
-
-
 
 // ************* START OF MULTIPLE UPLOAD TO LOCAL STORAGE BY MULTER ************
 // upload a maximum of 4 product images
@@ -165,7 +163,6 @@ const uploadFile = multer({
 
 exports.uploadFile = uploadFile.single("file");
 
-
 // ******* UPLOAD MULTIPLE IMAGES TO CLOUDINARY ***********************
 
 const cloudinaryStorage = new CloudinaryStorage({
@@ -205,11 +202,11 @@ exports.uploadMultiToCloudinary = async (req, res, next) => {
       throw new Error("No files uploaded");
     }
 
-    urls = []
+    urls = [];
     // Upload all files to Cloudinary in parallel
     await Promise.all(
-      req.files.map(async file => {
-        urls.push(file.path)
+      req.files.map(async (file) => {
+        urls.push(file.path);
         if (file.size === 0) {
           console.log(`${file.filename} File is empty`);
           return;
@@ -229,7 +226,6 @@ exports.uploadMultiToCloudinary = async (req, res, next) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // *** UPLOAD files/images for vendor registration
 
@@ -309,6 +305,39 @@ exports.uploadVendorFilesToCloudinary = async (req, res, next) => {
   }
 };
 
+//  this new implementation allows us to proceed even if no files
+// were provided (for cases like when updating a vendor)
+// exports.uploadVendorFilesToCloudinary = async (req, res, next) => {
+//   if (req.files && Object.keys(req.files).length) {
+//     try {
+//       const urls = {};
+
+//       // Upload all files to Cloudinary in parallel
+//       await Promise.all(
+//         Object.keys(req.files).map(async (fieldName) => {
+//           const file = req.files[fieldName][0];
+//           if (file.size === 0) {
+//             console.log(`${file.filename} File is empty`);
+//             return;
+//           }
+
+//           const result = await cloudinary.uploader.upload_stream(file.buffer);
+//           //         // console.log(result);
+//           urls[fieldName] = file.path;
+//         })
+//       );
+
+//       // Add the Cloudinary URLs to the request body
+//       req.body.vendorFiles = urls;
+//       next();
+//     } catch (error) {
+//       res.status(500).json({ error: error.message });
+//     }
+//   } else {
+//     // Proceed if no files are uploaded
+//     next();
+//   }
+// };
 
 // *** UPLOAD files/images for vet registration
 

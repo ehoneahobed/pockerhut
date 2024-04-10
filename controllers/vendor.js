@@ -382,6 +382,186 @@ exports.updateVendor = async (req, res) => {
   }
 };
 
+// exports.updateVendor = async (req, res) => {
+//   // Validate the request
+//   if (
+//     !req.body.sellerAccountInformation ||
+//     !req.body.businessInformation ||
+//     !req.body.vendorBankAccount
+//   ) {
+//     return res.status(400).send({
+//       message:
+//         "Seller account information, business information, and vendor bank account are required",
+//     });
+//   }
+
+//   try {
+//     const vendorId = req.params.vendorId;
+//     // Retrieve the current vendor data
+//     const currentVendor = await Vendor.findById(vendorId);
+//     if (!currentVendor) {
+//       return res.status(404).send({
+//         message: "Vendor not found with id " + vendorId,
+//       });
+//     }
+
+//     // Get the uploaded file information if available or use existing
+//     const IDFile = req.body.vendorFiles.IDFile || currentVendor.businessInformation.IDFile;
+//     const CACCertificateFile = req.body.vendorFiles.CACCertificateFile || currentVendor.businessInformation.CACCertificateFile;
+//     const TINCertificateFile = req.body.vendorFiles.TINCertificateFile || currentVendor.businessInformation.TINCertificateFile;
+//     const profilePhoto = req.body.vendorFiles.profilePhoto || currentVendor.profilePhoto;
+
+//     // Update the businessInformation with the file information
+//     req.body.businessInformation.IDFile = IDFile;
+//     req.body.businessInformation.CACCertificateFile = CACCertificateFile;
+//     req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+
+//     // Encrypt password using bcrypt if provided
+//     if (req.body.sellerAccountInformation.password) {
+//       const password = req.body.sellerAccountInformation.password;
+//       const salt = await bcrypt.genSalt(saltRounds);
+//       const encryptedPassword = await bcrypt.hash(password, salt);
+//       req.body.sellerAccountInformation.password = encryptedPassword;
+//     } else {
+//       // If no new password is provided, use existing password
+//       req.body.sellerAccountInformation.password = currentVendor.sellerAccountInformation.password;
+//     }
+
+//     // Prepare the update object
+//     const updateObject = {
+//       sellerAccountInformation: req.body.sellerAccountInformation,
+//       businessInformation: req.body.businessInformation,
+//       vendorBankAccount: req.body.vendorBankAccount,
+//       storeStatus: req.body.storeStatus || "pending",
+//       profilePhoto: profilePhoto,
+//     };
+
+//     // Include pickupAddresses in the update if provided
+//     if (req.body.pickupAddresses) {
+//       updateObject.pickupAddresses = req.body.pickupAddresses;
+//     }
+
+//     // Update the vendor with the new details
+//     const updatedVendor = await Vendor.findByIdAndUpdate(
+//       vendorId,
+//       updateObject,
+//       { new: true }
+//     );
+
+//     // Exclude the password from the returned payload
+//     const responseData = updatedVendor.toObject();
+//     delete responseData.sellerAccountInformation.password;
+
+//     res.send(responseData);
+//   } catch (err) {
+//     console.error("Error updating vendor:", err);
+//     res.status(500).send({
+//       message: "Error updating vendor with id " + req.params.vendorId,
+//     });
+//   }
+// };
+
+// this implementation of vendor details uses PATCH so
+// caters for just some parts and not updating everything
+exports.updateVendorDetails = async (req, res) => {
+  const vendorId = req.params.vendorId;
+
+  try {
+    // Retrieve the current vendor data
+    const currentVendor = await Vendor.findById(vendorId);
+    if (!currentVendor) {
+      return res.status(404).send({ message: "Vendor not found with id " + vendorId });
+    }
+
+    // If new files are provided, update the paths; otherwise, keep the existing ones
+    const IDFile = req.files && req.files.IDFile ? req.files.IDFile.path : currentVendor.businessInformation.IDFile;
+    const CACCertificateFile = req.files && req.files.CACCertificateFile ? req.files.CACCertificateFile.path : currentVendor.businessInformation.CACCertificateFile;
+    const TINCertificateFile = req.files && req.files.TINCertificateFile ? req.files.TINCertificateFile.path : currentVendor.businessInformation.TINCertificateFile;
+    const profilePhoto = req.files && req.files.profilePhoto ? req.files.profilePhoto.path : currentVendor.profilePhoto;
+
+    // Prepare the fields to be updated
+    const updateFields = {
+      ...req.body,
+      'businessInformation.IDFile': IDFile,
+      'businessInformation.CACCertificateFile': CACCertificateFile,
+      'businessInformation.TINCertificateFile': TINCertificateFile,
+      'profilePhoto': profilePhoto
+    };
+
+    // Encrypt password using bcrypt if provided
+    if (req.body.sellerAccountInformation && req.body.sellerAccountInformation.password) {
+      const password = req.body.sellerAccountInformation.password;
+      const salt = await bcrypt.genSalt(saltRounds);
+      const encryptedPassword = await bcrypt.hash(password, salt);
+      updateFields['sellerAccountInformation.password'] = encryptedPassword;
+    }
+
+    // Update the vendor with the new details
+    const updatedVendor = await Vendor.findByIdAndUpdate(vendorId, { $set: updateFields }, { new: true });
+
+    // Exclude the password from the returned payload
+    const responseData = updatedVendor.toObject();
+    delete responseData.sellerAccountInformation.password;
+
+    res.send(responseData);
+  } catch (err) {
+    console.error("Error updating vendor:", err);
+    res.status(500).send({
+      message: "Error updating vendor with id " + vendorId,
+    });
+  }
+};
+exports.updateVendor = async (req, res) => {
+  const vendorId = req.params.vendorId;
+
+  try {
+    // Retrieve the current vendor data
+    const currentVendor = await Vendor.findById(vendorId);
+    if (!currentVendor) {
+      return res.status(404).send({ message: "Vendor not found with id " + vendorId });
+    }
+
+    // If new files are provided, update the paths; otherwise, keep the existing ones
+    const IDFile = req.files && req.files.IDFile ? req.files.IDFile.path : currentVendor.businessInformation.IDFile;
+    const CACCertificateFile = req.files && req.files.CACCertificateFile ? req.files.CACCertificateFile.path : currentVendor.businessInformation.CACCertificateFile;
+    const TINCertificateFile = req.files && req.files.TINCertificateFile ? req.files.TINCertificateFile.path : currentVendor.businessInformation.TINCertificateFile;
+    const profilePhoto = req.files && req.files.profilePhoto ? req.files.profilePhoto.path : currentVendor.profilePhoto;
+
+    // Prepare the fields to be updated
+    const updateFields = {
+      ...req.body,
+      'businessInformation.IDFile': IDFile,
+      'businessInformation.CACCertificateFile': CACCertificateFile,
+      'businessInformation.TINCertificateFile': TINCertificateFile,
+      'profilePhoto': profilePhoto
+    };
+
+    // Encrypt password using bcrypt if provided
+    if (req.body.sellerAccountInformation && req.body.sellerAccountInformation.password) {
+      const password = req.body.sellerAccountInformation.password;
+      const salt = await bcrypt.genSalt(saltRounds);
+      const encryptedPassword = await bcrypt.hash(password, salt);
+      updateFields['sellerAccountInformation.password'] = encryptedPassword;
+    }
+
+    // Update the vendor with the new details
+    const updatedVendor = await Vendor.findByIdAndUpdate(vendorId, { $set: updateFields }, { new: true });
+
+    // Exclude the password from the returned payload
+    const responseData = updatedVendor.toObject();
+    delete responseData.sellerAccountInformation.password;
+
+    res.send(responseData);
+  } catch (err) {
+    console.error("Error updating vendor:", err);
+    res.status(500).send({
+      message: "Error updating vendor with id " + vendorId,
+    });
+  }
+};
+
+
+
 
 // delete vendor
 // exports.deleteVendor = async (req, res) => {

@@ -14,7 +14,11 @@ const vetServiceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    location: {
+    city: {
+      type: String,
+      required: true,
+    },
+    address: {
       type: String,
       required: true,
     },

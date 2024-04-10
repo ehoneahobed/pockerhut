@@ -18,6 +18,9 @@ router.post("/login", vendorController.loginVendor);
 // Update Vendor
 router.put("/:vendorId", uploadVendorFiles, uploadVendorFilesToCloudinary, vendorController.updateVendor);
 
+// Update Vendor
+// router.patch("/:vendorId", uploadVendorFiles, uploadVendorFilesToCloudinary, vendorController.updateVendorDetails );
+
 // update store status for a given vendor
 router.put(
   "/:vendorId/status",
