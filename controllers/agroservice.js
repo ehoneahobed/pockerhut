@@ -9,6 +9,8 @@ exports.createAgroservice = async (req, res) => {
       phoneNumber: req.body.phoneNumber,
       subject: req.body.subject,
       message: req.body.message,
+      city: req.body.city,
+      address: req.body.address,
     });
 
     const savedAgroservice = await newAgroservice.save();
