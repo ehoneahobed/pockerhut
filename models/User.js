@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    phoneNumber: {
+      type: String
+    },
 
     // billing_id: {
     //   type: mongoose.Schema.Types.ObjectId,

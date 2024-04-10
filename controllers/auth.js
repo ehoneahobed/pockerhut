@@ -7,7 +7,7 @@ const { sendInvitationEmail } = require('../services/email.service');
 
 exports.registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role, isAccessRevoked, invitationToken } = req.body;
+    const { firstName, lastName, email, password, phoneNumber, role, isAccessRevoked, invitationToken } = req.body;
 
        // Restrict registration for admin or superadmin roles to those with a valid invitation token
        if (role === 'admin' || role === 'superadmin') {
@@ -47,6 +47,7 @@ exports.registerUser = async (req, res) => {
       lastName: lastName,
       email: email,
       password: hashedPassword,
+      phoneNumber: phoneNumber,
       role: role,
       isAccessRevoked: isAccessRevoked,
     });
