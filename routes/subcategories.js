@@ -11,7 +11,8 @@ const {
   updateSubcategory,
   deleteSubcategory,
   getSubcategory,
-  getSubcategories
+  getSubcategories,
+  createMultipleSubcategories
 } = require("../controllers/subcategories");
 
 
@@ -31,5 +32,8 @@ router.get("/:id", getSubcategory);
 
 // Get all subcategories
 router.get("/", getSubcategories);
+
+// Create batch of subcategories
+router.post("/batch", verifyTokenAndAdmin, createMultipleSubcategories);
 
 module.exports = router;

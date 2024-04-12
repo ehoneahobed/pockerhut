@@ -10,6 +10,9 @@ const {
 // router.post('/', verifyTokenAndAdmin, categoryQuestionController.createCategoryQuestions);
 router.post('/', categoryQuestionController.createCategoryQuestions);
 
+// create multiple category questions
+router.post('/batch', categoryQuestionController.createBatchCategoryQuestions);
+
 // Update a category question
 router.put('/:id', verifyTokenAndAdmin, categoryQuestionController.updateCategoryQuestion);
 
