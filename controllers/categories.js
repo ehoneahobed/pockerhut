@@ -100,3 +100,39 @@ exports.getCategories = async (req, res) => {
     res.status(500).json(error);
   }
 };
+
+exports.createCategoryWithSubcategories = async (req, res) => {
+  const { name, description, featuredImage, subcategories } = req.body;
+
+  try {
+      // Step 1: Create subcategory documents
+      const subcategoryDocuments = subcategories.map(subcat => ({
+          name: subcat.name,
+          description: subcat.description,
+          parent: subcat.parent  // Ensure parent is set if needed, or remove if not
+      }));
+
+      const createdSubcategories = await Subcategory.insertMany(subcategoryDocuments);
+
+      // Step 2: Create the category with references to the subcategories
+      const category = new Category({
+          name,
+          description,
+          featuredImage,
+          subcategories: createdSubcategories.map(subcat => subcat._id)
+      });
+
+      const savedCategory = await category.save();
+
+      // Populate subcategories in the response if needed
+      await savedCategory.populate({
+          path: 'subcategories',
+          select: 'name description parent'
+      }).execPopulate();
+
+      res.status(201).json(savedCategory);
+  } catch (error) {
+      console.error('Error creating category with subcategories:', error);
+      res.status(500).json({ message: "Failed to create category and subcategories", error: error.message });
+  }
+};

@@ -1,5 +1,4 @@
 const CategoryQuestion = require('../models/CategoryQuestion');
-const categoryQuestion = require('../models/CategoryQuestion');
 
 // add new questions
 exports.createCategoryQuestions = async (req, res) => {
@@ -33,6 +32,35 @@ exports.createCategoryQuestions = async (req, res) => {
         return res.status(500).json({ message: 'failed', error})
     }
 }
+
+// Add new multiple category questions
+exports.createBatchCategoryQuestions = async (req, res) => {
+  const { categoryId, questions } = req.body; // Expect an array of questions in the body
+
+  try {
+      // Validate the category exists first
+      const categoryExists = await Category.findById(categoryId);
+      if (!categoryExists) {
+          return res.status(404).json({ message: 'Category not found' });
+      }
+
+      // Map over the questions array to create new question objects
+      const questionsToCreate = questions.map(question => ({
+          category: categoryId,
+          question: question.question,
+          required: question.required,
+          questionHint: question.questionHint || ""  // Use empty string if no hint provided
+      }));
+
+      // Use insertMany to add all questions at once
+      const createdQuestions = await CategoryQuestion.insertMany(questionsToCreate);
+
+      res.status(201).json({ message: 'Category questions created successfully', data: createdQuestions });
+  } catch (error) {
+      console.error('Error creating category questions:', error);
+      res.status(500).json({ message: 'Failed to create category questions', error: error.message });
+  }
+};
 
 // Update a category question
 exports.updateCategoryQuestion = async (req, res) => {

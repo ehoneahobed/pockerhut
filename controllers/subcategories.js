@@ -34,6 +34,42 @@ exports.createSubcategory = async (req, res) => {
 };
 
 
+// create multiple subcategories
+exports.createMultipleSubcategories = async (req, res) => {
+  const subcategoriesData = req.body.subcategories; // Expect an array of subcategory data
+
+  try {
+      // Validate existence of all parent categories first
+      const categoryIds = subcategoriesData.map(subcat => subcat.categoryId);
+      const categories = await Category.find({ '_id': { $in: categoryIds } });
+      
+      if (categories.length !== new Set(categoryIds).size) {
+          return res.status(404).json({ message: 'One or more categories not found' });
+      }
+
+      // Create subcategory documents
+      const subcategories = subcategoriesData.map(subcat => ({
+          name: subcat.name,
+          description: subcat.description,
+          parent: subcat.categoryId
+      }));
+
+      const createdSubcategories = await Subcategory.insertMany(subcategories);
+
+      // Optionally, update each category to include new subcategories
+      await Promise.all(createdSubcategories.map(async (subcat) => {
+          await Category.findByIdAndUpdate(subcat.parent, {
+              $push: { subcategories: subcat._id }
+          });
+      }));
+
+      res.status(201).json(createdSubcategories);
+  } catch (error) {
+      console.error('Error creating multiple subcategories:', error);
+      res.status(500).json({ message: "Failed to create subcategories", error: error.message });
+  }
+};
+
 // // Update a subcategory
 // exports.updateSubcategory = async (req, res) => {
 //   try {

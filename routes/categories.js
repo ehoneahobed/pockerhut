@@ -12,6 +12,7 @@ const {
   deleteCategory,
   getCategory,
   getCategories,
+  createCategoryWithSubcategories,
   createSubcategory,
   updateSubcategory,
   deleteSubcategory,
@@ -36,5 +37,7 @@ router.get("/:id", getCategory);
 // Get all categories
 router.get("/", getCategories);
 
+// create new category with subcategories
+router.post('/batch', createCategoryWithSubcategories);
 
 module.exports = router;
