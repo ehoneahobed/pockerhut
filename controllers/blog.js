@@ -99,16 +99,16 @@ exports.getBlog = async (req, res) => {
 };
 
 // getting all blog posts
-// exports.getBlogs = async (req, res) => {
-//   try {
-//     // Get all blogs
-//     const blogs = await Blog.find();
+exports.getBlogs = async (req, res) => {
+  try {
+    // Get all blogs
+    const blogs = await Blog.find();
 
-//     res.status(200).json(blogs);
-//   } catch (error) {
-//     res.status(500).json(error);
-//   }
-// };
+    res.status(200).json(blogs);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+};
 
 
 // ************ Get blog posts with pagination ****************
@@ -139,7 +139,7 @@ exports.getBlog = async (req, res) => {
 
 
 // ******************** Get blog posts with search queries and pagination ********
-exports.getBlogs = async (req, res) => {
+exports.getBlogswithPagination = async (req, res) => {
   try {
     // Set default values for page and limit
     let { page = 1, limit = 10, search } = req.query;
