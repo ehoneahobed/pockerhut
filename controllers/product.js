@@ -286,7 +286,8 @@ exports.getProduct = async (req, res) => {
             .populate('information.category', 'name') // Populate the category field and select only the name field
             .populate('information.subcategory', 'name') // Populate the subcategory field and select only the name field
             .populate('reviews') // Populate the reviews field
-            .populate('information.categoryQuestions.question', 'question'); // Populate the categoryQuestions.question field and select only the question field
+            .populate('information.categoryQuestions.question', 'question') // Populate the categoryQuestions.question field and select only the question field
+            .populate('vendor', 'sellerAccountInformation.shopName');
 
         if (!product) {
             return res.status(404).send({
