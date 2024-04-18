@@ -89,6 +89,10 @@ exports.loginUser = async (req, res) => {
     );
 
     const { password, ...others } = user._doc;
+
+    // update lastLogin date
+    user.lastLogin = Date.now();
+    user.save()
     res.status(200).json({ ...others, accessToken });
   } catch (error) {
     res.status(500).json(error);
