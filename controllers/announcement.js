@@ -2,12 +2,13 @@ const Announcement = require("../models/Announcement");
 
 // create new announcement
 exports.createAnnouncement = async (req, res) => {
-  const { subject, content, expiration } = req.body;
+  const { subject, content, startDate, endDate } = req.body;
   try {
     let announcement = new Announcement({
       subject,
       content,
-      expiration,
+      startDate,
+      endDate
     });
     announcement = await announcement.save();
     res.status(200).json({ success: true, announcement });
