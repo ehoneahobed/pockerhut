@@ -38,6 +38,6 @@ router.get("/:id", getCategory);
 router.get("/", getCategories);
 
 // create new category with subcategories
-router.post('/batch', createCategoryWithSubcategories);
+router.post('/batch', uploadSingleImage, uploadToCloudinary, createCategoryWithSubcategories);
 
 module.exports = router;
