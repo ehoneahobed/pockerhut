@@ -28,7 +28,7 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    const { name, description } = req.body;
+    const { name, description, featuredImage } = req.body;
 
     // Find the category by ID
     const category = await Category.findById(categoryId);
@@ -38,8 +38,9 @@ exports.updateCategory = async (req, res) => {
     }
 
     // Update the category properties
-    category.name = name;
-    category.description = description;
+    if (name) {category.name = name};
+    if(description) {category.description = description};
+    if(featuredImage) {category.featuredImage = featuredImage};
 
     // Save the updated category to the database
     const updatedCategory = await category.save();

@@ -36,39 +36,35 @@ exports.createSubcategory = async (req, res) => {
 
 // create multiple subcategories
 exports.createMultipleSubcategories = async (req, res) => {
-  const subcategoriesData = req.body.subcategories; // Expect an array of subcategory data
+  const { categoryId, subcategories } = req.body; // Expect subcategories array and a single categoryId
 
   try {
-      // Validate existence of all parent categories first
-      const categoryIds = subcategoriesData.map(subcat => subcat.categoryId);
-      const categories = await Category.find({ '_id': { $in: categoryIds } });
-      
-      if (categories.length !== new Set(categoryIds).size) {
-          return res.status(404).json({ message: 'One or more categories not found' });
+      // Validate the existence of the parent category first
+      const parentCategory = await Category.findById(categoryId);
+      if (!parentCategory) {
+          return res.status(404).json({ message: 'Parent category not found' });
       }
 
-      // Create subcategory documents
-      const subcategories = subcategoriesData.map(subcat => ({
+      // Create subcategory documents with the single categoryId
+      const subcategoriesToCreate = subcategories.map(subcat => ({
           name: subcat.name,
           description: subcat.description,
-          parent: subcat.categoryId
+          parent: categoryId  // Use the single categoryId for all subcategories
       }));
 
-      const createdSubcategories = await Subcategory.insertMany(subcategories);
+      const createdSubcategories = await Subcategory.insertMany(subcategoriesToCreate);
 
-      // Optionally, update each category to include new subcategories
-      await Promise.all(createdSubcategories.map(async (subcat) => {
-          await Category.findByIdAndUpdate(subcat.parent, {
-              $push: { subcategories: subcat._id }
-          });
-      }));
+      // Update the parent category with the new subcategories
+      parentCategory.subcategories.push(...createdSubcategories.map(subcat => subcat._id));
+      await parentCategory.save();
 
-      res.status(201).json(createdSubcategories);
+      res.status(201).json({ message: 'Subcategories created successfully', data: createdSubcategories });
   } catch (error) {
       console.error('Error creating multiple subcategories:', error);
       res.status(500).json({ message: "Failed to create subcategories", error: error.message });
   }
 };
+
 
 // // Update a subcategory
 // exports.updateSubcategory = async (req, res) => {
