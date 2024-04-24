@@ -26,7 +26,7 @@ const {
 router.post("/", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, createCategory);
 
 // Update a category
-router.put("/:id", verifyTokenAndAdmin, updateCategory);
+router.patch("/:id", verifyTokenAndAdmin, updateCategory);
 
 // Delete a category
 router.delete("/:id", verifyTokenAndAdmin, deleteCategory);
