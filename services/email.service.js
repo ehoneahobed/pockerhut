@@ -36,7 +36,7 @@ async function sendInvitationEmail({ to, token }) {
       process.env.FRONTEND_BASE_URL
     }/admin/registration?token=${encodeURIComponent(token)}`;
 
-  await sendEmail({ to, subject, text });
+  await sendEmailWithMailerSend({ to, subject, text });
 }
 
 const mailerSend = new MailerSend({

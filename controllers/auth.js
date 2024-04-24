@@ -103,6 +103,7 @@ exports.loginUser = async (req, res) => {
 
 // admin generating invitation for another admin
 exports.inviteAdmin = async (req, res) => {
+
   if (req.user.role !== 'superadmin') {
     return res.status(403).send("Unauthorized");
   }
@@ -118,12 +119,14 @@ exports.inviteAdmin = async (req, res) => {
     expiresAt
   });
 
+  console.log(invitation)
   try {
     await invitation.save();
     // Send the token to the email provided
     await sendInvitationEmail({ to: email, token: token });
     res.send("Invitation sent successfully");
   } catch (err) {
-    res.status(500).send("Server error");
+    console.error("Error saving invitation:", err);
+  res.status(500).send("Server error: " + err.message);
   }
 };
