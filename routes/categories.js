@@ -17,7 +17,8 @@ const {
   updateSubcategory,
   deleteSubcategory,
   getSubcategory,
-  getSubcategories
+  getSubcategories,
+  enableordisableCategory
 } = require("../controllers/categories");
 
 // CATEGORIES
@@ -26,7 +27,10 @@ const {
 router.post("/", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, createCategory);
 
 // Update a category
-router.patch("/:id", verifyTokenAndAdmin, updateCategory);
+router.patch("/:id", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary,updateCategory);
+
+// enable or disable category
+router.put("/:id", verifyTokenAndAdmin, enableordisableCategory);
 
 // Delete a category
 router.delete("/:id", verifyTokenAndAdmin, deleteCategory);

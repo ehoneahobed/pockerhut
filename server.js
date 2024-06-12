@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const cors = require('cors');
+const morgan = require('morgan');
 const app = express();
 
 // import routers
@@ -44,6 +45,7 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 // add all necessary middlewares
 app.use(cors());
 app.use(express.json()); // middleware that allows the sending and receiving of json data
+app.use(morgan('dev')); // middleware that logs requests to the console
 
 app.use('/api/user', userRoute);
 app.use('/api/products', productRoutes);

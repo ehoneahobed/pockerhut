@@ -7,6 +7,11 @@ exports.createSubcategory = async (req, res) => {
   try {
     const { name, description, categoryId } = req.body;
 
+    const existingSubcategory = await Subcategory.findOne({ name });
+    if (existingSubcategory) {
+      return res.status(400).json({ message: 'Subcategory already exists' });
+    }
+
     // Check if the category exists
     const category = await Category.findById(categoryId);
     if (!category) {

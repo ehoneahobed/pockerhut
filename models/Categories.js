@@ -28,6 +28,10 @@ const categorySchema = new mongoose.Schema(
     description: {
       type: String
     },
+    isDisabled: {
+      type: Boolean,
+      default: false
+    },
     featuredImage: {
       type: String,
       required: true
