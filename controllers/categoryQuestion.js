@@ -1,4 +1,4 @@
-const CategoryQuestion = require('../models/CategoryQuestion');
+const {CategoryQuestion} = require('../models/CategoryQuestion');
 
 // add new questions
 exports.createCategoryQuestions = async (req, res) => {
@@ -125,7 +125,6 @@ exports.getCategoryQuestion = async (req, res) => {
 exports.getCategoryQuestions = async (req, res) => {
     try {
       const categoryId = req.params.categoryId;
-  
       // Find all category questions for the given category
       const categoryQuestions = await CategoryQuestion.find({ category: categoryId });
   

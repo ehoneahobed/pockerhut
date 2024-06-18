@@ -1,5 +1,6 @@
 const { Category, Subcategory } = require("../models/Categories");
 const { CategoryQuestion } = require("../models/CategoryQuestion");
+const {Product} = require('../models/Product')
 
 // ************* CATEGORIES **********************************
 
@@ -66,19 +67,18 @@ exports.updateCategory = async (req, res) => {
 exports.deleteCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
+    const category = await Category.findByIdAndDelete(categoryId);
 
-    // Find and delete the category
-    await Category.findByIdAndDelete(categoryId);
-
-    // Delete associated subcategories
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+    await Product.deleteMany({ 'information.category': categoryId });
     await Subcategory.deleteMany({ parent: categoryId });
-
     await CategoryQuestion.deleteMany({ category: categoryId });
-
     res
       .status(200)
       .json({
-        message: "Category and associated subcategories deleted successfully",
+        message: "Category and associated subcategories deleted successfully"
       });
   } catch (error) {
     res.status(500).json(error);
