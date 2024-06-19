@@ -2,7 +2,7 @@ const request = require('request');
 
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
-const Product = require('../models/Product');
+const {Product} = require('../models/Product');
 const _ = require('lodash');
 
 const {initializePayment, verifyPayment, getBanks, getAccountDetails} = require('../utils/payment')(request);
