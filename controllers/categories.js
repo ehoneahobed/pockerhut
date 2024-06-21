@@ -109,7 +109,7 @@ exports.getCategory = async (req, res) => {
 exports.getCategories = async (req, res) => {
   try {
     // Find all categories
-    const categories = await Category.find({ isDisabled: false }).populate({
+    const categories = await Category.find().populate({
       path: "subcategories",
       select: "name",
     });
