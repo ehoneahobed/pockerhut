@@ -11,11 +11,6 @@ const trackingSchema = new mongoose.Schema({
     ref: "Order",
     required: true,
   },
-  product_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true,
-  },
   order_date: { type: Date, required: true },
   pending_confirmation_date: { type: Date },
   shipping_date: { type: Date },

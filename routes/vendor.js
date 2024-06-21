@@ -16,7 +16,7 @@ router.post("/", uploadVendorFiles, uploadVendorFilesToCloudinary,  vendorContro
 router.post("/login", vendorController.loginVendor);
 
 // Update Vendor
-router.put("/:vendorId", uploadVendorFiles, uploadVendorFilesToCloudinary, vendorController.updateVendor);
+router.put("/:vendorId", vendorController.updateVendor);
 
 // Update Vendor
 // router.patch("/:vendorId", uploadVendorFiles, uploadVendorFilesToCloudinary, vendorController.updateVendorDetails );

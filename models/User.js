@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status:{
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active'
+    },
     resetToken: String,
     resetTokenExpiration: Date,
     lastLogin: Date,
