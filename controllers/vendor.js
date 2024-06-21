@@ -318,6 +318,7 @@ exports.updateVendor = async (req, res) => {
         "Seller account information, business information, and vendor bank account are required",
     });
   }
+  console.log(req.body);
 
   // Get the uploaded file information
   const IDFile = req.body.vendorFiles.IDFile || "";
@@ -345,6 +346,7 @@ exports.updateVendor = async (req, res) => {
     vendorBankAccount: req.body.vendorBankAccount,
     storeStatus: req.body.storeStatus || "pending",
     profilePhoto: profilePhoto,
+    'sellerAccountInformation.shopName': req.body.storeName
   };
 
   // Include pickupAddresses in the update if provided
@@ -485,7 +487,8 @@ exports.updateVendorDetails = async (req, res) => {
       'businessInformation.IDFile': IDFile,
       'businessInformation.CACCertificateFile': CACCertificateFile,
       'businessInformation.TINCertificateFile': TINCertificateFile,
-      'profilePhoto': profilePhoto
+      'profilePhoto': profilePhoto,
+      'storeName': req.body.storeName || ''
     };
 
     // Encrypt password using bcrypt if provided
@@ -511,6 +514,7 @@ exports.updateVendorDetails = async (req, res) => {
     });
   }
 };
+
 exports.updateVendor = async (req, res) => {
   const vendorId = req.params.vendorId;
 
@@ -529,7 +533,10 @@ exports.updateVendor = async (req, res) => {
 
     // Prepare the fields to be updated
     const updateFields = {
-      ...req.body,
+      'sellerAccountInformation.shopName': req.body.storeName,
+      'sellerAccountInformation.phoneNumber': req.body.phoneNumber,
+      'businessInformation.address1': req.body.streetAddress,
+      'businessInformation.city': req.body.location,
       'businessInformation.IDFile': IDFile,
       'businessInformation.CACCertificateFile': CACCertificateFile,
       'businessInformation.TINCertificateFile': TINCertificateFile,

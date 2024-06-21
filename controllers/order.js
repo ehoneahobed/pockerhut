@@ -644,8 +644,12 @@ exports.getAggregatedOrdersByAllUsers = async (req, res) => {
             totalAmountSpent: 1,
             totalPaidOrders: 1,
             userData: {
+              _id:1,
               firstName: 1,
               lastName: 1,
+              status: 1,
+              lastLogin: 1,
+              phoneNumber:1,
               email: 1,
               createdAt: 1,
               updatedAt: 1,

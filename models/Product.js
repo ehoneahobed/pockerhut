@@ -8,23 +8,23 @@ const productInformationSchema = new mongoose.Schema({
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Category",
-    required: [true, 'category is required. Please provide the category ID'],
+    // required: [true, 'category is required. Please provide the category ID'],
   },
   subcategory: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Subcategory",
-    required: true,
+    // required: true,
   },
   categoryQuestions: [
     {
       question: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "CategoryQuestion",
-        required: true,
+        // required: true,
       },
       answer: {
         type: String,
-        required: true,
+        // required: true,
       },
     },
   ],

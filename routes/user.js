@@ -38,6 +38,9 @@ router.get("/user-details/:userId", verifyTokenAndAuthorization, userController.
 // get all users (only admins can)
 router.get("/", verifyTokenAndAdmin, userController.getUsers);
 
+//enable or disable user
+
+router.patch('/:id', verifyTokenAndAdmin, userController.updateStatus);
 
 
 // Request password reset email

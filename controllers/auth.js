@@ -76,7 +76,9 @@ exports.loginUser = async (req, res) => {
     // Create and assign a token
     //   const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET);
     //   res.header("auth-token", token).send(token);
-
+   if(user.status === 'inactive') {
+    return res.status(400).send("Your account has been deactivated. Please contact the administrator for more information.");
+   }
     const accessToken = jwt.sign(
       {
         id: user._id,
