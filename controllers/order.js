@@ -479,11 +479,9 @@ exports.getProductsByVendorInOrder = async (req, res) => {
     );
 
     if (filteredProductDetails.length === 0) {
-      return res
-        .status(404)
-        .send({
-          message: "No products found for the given vendor in this order",
-        });
+      return res.status(404).send({
+        message: "No products found for the given vendor in this order",
+      });
     }
 
     return res.status(200).send({ products: filteredProductDetails });
@@ -586,92 +584,93 @@ exports.getAggregatedOrdersByUser = async (req, res) => {
     res.json(aggregation[0]);
   } catch (error) {
     console.error("Error fetching aggregated order data:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching aggregated order data.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching aggregated order data.",
+    });
   }
 };
 
 // Get aggregated order data for all users
 exports.getAggregatedOrdersByAllUsers = async (req, res) => {
-    try {
-      const aggregation = await Order.aggregate([
-        {
-          $group: {
-            _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
-            count: { $sum: 1 },
-            totalAmount: { $sum: "$totalAmount" },
-          }
+  try {
+    const aggregation = await Order.aggregate([
+      {
+        $group: {
+          _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$totalAmount" },
         },
-        {
-          $group: {
-            _id: "$_id.customer",
-            totalOrders: { $sum: "$count" },
-            ordersByStatus: {
-              $push: {
-                status: "$_id.status",
-                count: "$count",
-                isPaid: "$_id.isPaid",
-              }
+      },
+      {
+        $group: {
+          _id: "$_id.customer",
+          totalOrders: { $sum: "$count" },
+          ordersByStatus: {
+            $push: {
+              status: "$_id.status",
+              count: "$count",
+              isPaid: "$_id.isPaid",
             },
-            totalAmountSpent: {
-              $sum: {
-                $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0]
-              }
+          },
+          totalAmountSpent: {
+            $sum: {
+              $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0],
             },
-            totalPaidOrders: {
-              $sum: {
-                $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0]
-              }
-            }
-          }
+          },
+          totalPaidOrders: {
+            $sum: {
+              $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0],
+            },
+          },
         },
-        {
-          $lookup: {
-            from: "users",
-            localField: "_id",
-            foreignField: "_id",
-            as: "userData"
-          }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userData",
         },
-        { $unwind: "$userData" },
-        {
-          $project: {
-            totalOrders: 1,
-            ordersByStatus: 1,
-            totalAmountSpent: 1,
-            totalPaidOrders: 1,
-            userData: {
-              _id:1,
-              firstName: 1,
-              lastName: 1,
-              status: 1,
-              lastLogin: 1,
-              phoneNumber:1,
-              email: 1,
-              createdAt: 1,
-              updatedAt: 1,
-              role: 1,
-              isAccessRevoked: 1 // Include isAccessRevoked field
-            }
-          }
-        }
-      ]);
-  
-      if (aggregation.length === 0) {
-        return res.status(404).json({ message: "No aggregated data found." });
-      }
-  
-      res.json(aggregation);
-    } catch (error) {
-      console.error("Error fetching aggregated order data for all users:", error);
-      res.status(500).json({ message: "Server error occurred while fetching aggregated data for all users." });
-    }
-  };
-  
+      },
+      { $unwind: "$userData" },
+      {
+        $project: {
+          totalOrders: 1,
+          ordersByStatus: 1,
+          totalAmountSpent: 1,
+          totalPaidOrders: 1,
+          userData: {
+            _id: 1,
+            firstName: 1,
+            lastName: 1,
+            status: 1,
+            lastLogin: 1,
+            phoneNumber: 1,
+            email: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            role: 1,
+            isAccessRevoked: 1, // Include isAccessRevoked field
+          },
+        },
+      },
+    ]);
 
+    if (aggregation.length === 0) {
+      return res.status(404).json({ message: "No aggregated data found." });
+    }
+
+    res.json(aggregation);
+  } catch (error) {
+    console.error("Error fetching aggregated order data for all users:", error);
+    res
+      .status(500)
+      .json({
+        message:
+          "Server error occurred while fetching aggregated data for all users.",
+      });
+  }
+};
 
 // agggregated order data for a single vendor
 exports.getAggregatedDataForVendor = async (req, res) => {
@@ -740,22 +739,18 @@ exports.getAggregatedDataForVendor = async (req, res) => {
     ]);
 
     if (aggregation.length === 0) {
-      return res
-        .status(404)
-        .json({
-          message: "No aggregated data found for the specified vendor.",
-        });
+      return res.status(404).json({
+        message: "No aggregated data found for the specified vendor.",
+      });
     }
 
     res.json(aggregation[0]); // Assuming there's at least one document returned
   } catch (error) {
     console.error("Error fetching aggregated data for vendor:", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "Server error occurred while fetching aggregated data for vendor.",
-      });
+    res.status(500).json({
+      message:
+        "Server error occurred while fetching aggregated data for vendor.",
+    });
   }
 };
 
@@ -829,12 +824,10 @@ exports.getAggregatedDataForAllVendors = async (req, res) => {
     res.json(aggregation); // Return data for all vendors
   } catch (error) {
     console.error("Error fetching aggregated data for all vendors:", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "Server error occurred while fetching aggregated data for all vendors.",
-      });
+    res.status(500).json({
+      message:
+        "Server error occurred while fetching aggregated data for all vendors.",
+    });
   }
 };
 
@@ -914,11 +907,9 @@ exports.getAdminOverview = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching admin overview data:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching admin overview data.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching admin overview data.",
+    });
   }
 };
 
@@ -928,7 +919,8 @@ exports.getAllAdminOverview = async (req, res) => {
 
   // Set default values for startDate and endDate if not provided
   endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
-  startDate = startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
 
   // Calculate the difference in days for averaging
   const diffInTime =
@@ -936,76 +928,90 @@ exports.getAllAdminOverview = async (req, res) => {
   const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
 
   try {
-  const matchStage = {
-    $match: {
-      orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
-    },
-  };
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+      },
+    };
 
-  const groupStage = {
-    $group: {
-      _id: {
-        year: { $year: "$orderDate" },
-        month: { $month: "$orderDate" }
-    },
-    overViewDate: { $first: "$orderDate" },
-      totalSales: { $sum: "$totalAmount" },
-      totalItemsSold: { $sum: { $size: "$productDetails" } },
-      averageOrderValue: { $avg: "$totalAmount" },
-      totalOrders: { $sum: 1 },
-      totalPendingOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+    const groupStage = {
+      $group: {
+        _id: {
+          year: { $year: "$orderDate" },
+          month: { $month: "$orderDate" },
+        },
+        overViewDate: { $first: "$orderDate" },
+        totalSales: { $sum: "$totalAmount" },
+        totalItemsSold: { $sum: { $size: "$productDetails" } },
+        averageOrderValue: { $avg: "$totalAmount" },
+        totalOrders: { $sum: 1 },
+        totalPendingOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+        },
+        totalFulfilledOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+        },
+        totalFailedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
+        },
+        totalReadyToGoOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
+        },
+        totalCompletedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+        },
+        totalReturnedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
+        },
+        productDetails: { $push: "$productDetails" },
       },
-      totalFulfilledOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+    };
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+    const lookupStage = {
+      $lookup: {
+        from: "products", // replace with your actual Product collection name
+        localField: "productDetails.productID",
+        foreignField: "_id",
+        as: "productDetails.productInfo",
       },
-      totalFailedOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
-      },
-      totalReadyToGoOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
-      },
-      totalCompletedOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
-      },
-      totalReturnedOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
-      },
-    },
-  };
+    };
 
-  const sortStage = {
-    $sort: {
-        overViewDate: -1 // Use 1 for ascending order or -1 for descending order
-    }
-};
+    const sortStage = {
+      $sort: {
+        overViewDate: -1, // Use 1 for ascending order or -1 for descending order
+      },
+    };
 
-  const projectStage = {
-    $project: {
-      _id: 0,
-      totalSales: 1,
-      totalItemsSold: 1,
-      averageOrderValue: 1,
-      totalOrders: 1,
-      averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
-      averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
-      totalPendingOrders: 1,
-      totalFulfilledOrders: 1,
-      totalFailedOrders: 1,
-      totalReadyToGoOrders: 1,
-      totalCompletedOrders: 1,
-      totalReturnedOrders: 1,
-      overViewDate: {
-        $dateToString: { format: "%Y-%m", date: "$overViewDate" } // Formatting to Year-Month
-    },
-    },
-  };
+    const projectStage = {
+      $project: {
+        _id: 0,
+        totalSales: 1,
+        totalItemsSold: 1,
+        averageOrderValue: 1,
+        totalOrders: 1,
+        averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
+        averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
+        totalPendingOrders: 1,
+        totalFulfilledOrders: 1,
+        totalFailedOrders: 1,
+        totalReadyToGoOrders: 1,
+        totalCompletedOrders: 1,
+        totalReturnedOrders: 1,
+        productDetails: 1,
+        overViewDate: {
+          $dateToString: { format: "%Y-%m", date: "$overViewDate" }, // Formatting to Year-Month
+        },
+      },
+    };
 
-  
     const ordersOverview = await Order.aggregate([
       matchStage,
       groupStage,
       sortStage,
+      unwindStage,
+      lookupStage,
       projectStage,
     ]);
 
@@ -1020,13 +1026,202 @@ exports.getAllAdminOverview = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching admin overview data:", error);
+    res.status(500).json({
+      message: "Server error occurred while fetching admin overview data.",
+    });
+  }
+};
+// Adjust the path as necessary
+
+exports.getProductAnalytics = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+  // Calculate the difference in days for averaging
+  const diffInTime =
+    new Date(endDate).getTime() - new Date(startDate).getTime();
+  const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
+
+  try {
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true
+      },
+    };
+
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+
+    const groupStage = {
+      $group: {
+        _id: "$productDetails.productID",
+        totalSales: { $sum: "$productDetails.totalPrice" },
+        totalItemsSold: { $sum: "$productDetails.quantity" },
+        averageOrderValue: { $avg: "$productDetails.totalPrice" },
+        totalOrders: { $sum: 1 },
+        totalPendingOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+        },
+        totalFulfilledOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+        },
+        totalFailedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
+        },
+        totalReadyToGoOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
+        },
+        totalCompletedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+        },
+        totalReturnedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
+        },
+        productDetails: { $first: "$productDetails" },
+      },
+    };
+
+    const lookupStage = {
+      $lookup: {
+        from: "products", // replace with your actual Product collection name
+        localField: "_id",
+        foreignField: "_id",
+        as: "productInfo",
+      },
+    };
+
+    const sortStage = {
+      $sort: {
+        totalSales: -1, // Sorting by total sales in descending order
+      },
+    };
+
+    const projectStage = {
+      $project: {
+        _id: 0,
+        productID: "$_id",
+        productInfo: { $arrayElemAt: ["$productInfo", 0] }, // Unwrap the product info
+        totalSales: 1,
+        totalItemsSold: 1,
+        averageOrderValue: 1,
+        totalOrders: 1,
+        averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
+        averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
+        totalPendingOrders: 1,
+        totalFulfilledOrders: 1,
+        totalFailedOrders: 1,
+        totalReadyToGoOrders: 1,
+        totalCompletedOrders: 1,
+        totalReturnedOrders: 1,
+      },
+    };
+
+    const productAnalytics = await Order.aggregate([
+      matchStage,
+      unwindStage,
+      groupStage,
+      lookupStage,
+      sortStage,
+      projectStage,
+    ]);
+
+    if (productAnalytics.length > 0) {
+      res.json(productAnalytics);
+    } else {
+      res
+        .status(404)
+        .json({
+          message: "No product sales data found in the given date range.",
+        });
+    }
+  } catch (error) {
+    console.error("Error fetching product analytics data:", error);
+    res.status(500).json({
+      message: "Server error occurred while fetching product analytics data.",
+    });
+  }
+};
+
+exports.getTopProductsBySales = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+  try {
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+      },
+    };
+
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+
+    const groupStage = {
+      $group: {
+        _id: "$productDetails.productID",
+        totalQuantity: { $sum: "$productDetails.quantity" },
+        totalSales: { $sum: "$productDetails.totalPrice" },
+      },
+    };
+
+    const sortStage = {
+      $sort: { totalSales: -1 }, // Sort by total sales in descending order
+    };
+
+    const lookupStage = {
+      $lookup: {
+        from: "products",
+        localField: "_id",
+        foreignField: "_id",
+        as: "productDetails",
+      },
+    };
+
+    const projectStage = {
+      $project: {
+        _id: 0,
+        productID: "$_id",
+        totalQuantity: 1,
+        totalSales: 1,
+        productDetails: { $arrayElemAt: ["$productDetails", 0] }, // Get the first (and only) product detail
+      },
+    };
+
+    const topProducts = await Order.aggregate([
+      matchStage,
+      unwindStage,
+      groupStage,
+      sortStage,
+      lookupStage,
+      projectStage,
+    ]);
+
+    if (topProducts.length > 0) {
+      res.json(topProducts);
+    } else {
+      res
+        .status(404)
+        .json({ message: "No products found in the given date range." });
+    }
+  } catch (error) {
+    console.error("Error fetching top products by sales:", error);
     res
       .status(500)
       .json({
-        message: "Server error occurred while fetching admin overview data.",
+        message: "Server error occurred while fetching top products by sales.",
       });
   }
-
 };
 
 exports.getWeeklySalesOverview = async (req, res) => {
@@ -1116,10 +1311,8 @@ exports.getWeeklySalesOverview = async (req, res) => {
     res.json({ weeklySalesOverview: response });
   } catch (error) {
     console.error("Error fetching weekly sales overview:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching weekly sales overview.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching weekly sales overview.",
+    });
   }
 };
