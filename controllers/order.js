@@ -68,24 +68,32 @@ exports.createOrder = async (req, res) => {
 
 // update the orderStatus of a given order
 exports.updateOrderStatus = async (req, res) => {
-  const { status } = req.body;
+  const { status, reason } = req.body;
   try {
+    let updateFields = { status };
+
+    // If the status is "canceled", add the reason to the update fields
+    if (status === 'canceled') {
+      updateFields.reason = reason;
+    }
+
     let order = await Order.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updateFields,
       { new: true }
     );
+
     if (!order) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Order not found" });
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
+
     res.status(200).json({ success: true, order });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");
   }
 };
+
 
 // Update the isPaid status of an order
 // exports.updateIsPaidStatus = async (req, res) => {

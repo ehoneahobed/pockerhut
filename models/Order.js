@@ -130,6 +130,10 @@ const OrderSchema = new Schema({
   tax: {
     type: Number,
   },
+  reason:{
+    type: String,
+    required: false
+  },
   totalAmount: {
     type: Number,
     required: true,

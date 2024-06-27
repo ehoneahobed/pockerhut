@@ -59,6 +59,7 @@ const verifyTokenAndAuthorization = (req, res, next) => {
 // verify if the action is being taken by an Admin
 const verifyTokenAndAdmin = (req, res, next) => {
     verifyToken(req, res, async () => {
+        console.log(req.user);
         if (req.user.isAdmin || req.user.role === 'admin' || req.user.role === 'superadmin') {
             try {
                 // Find the user by their ID to check if their access has been revoked

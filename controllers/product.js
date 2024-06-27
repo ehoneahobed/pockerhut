@@ -208,6 +208,7 @@ exports.updateVisibilityStatus = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
     try {
+        console.log(req.body);
         const updates = {};
         if (req.body.information) updates.information = req.body.information;
         if (req.body.details) updates.details = req.body.details;
@@ -229,6 +230,7 @@ exports.updateProduct = async (req, res) => {
         }
         res.send(product);
     } catch (err) {
+        console.log(err);
         if (err.kind === "ObjectId") {
             return res.status(404).send({
                 message: "Product not found with id " + req.params.productId
