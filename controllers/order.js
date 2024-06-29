@@ -94,6 +94,48 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+exports.updateMultipleOrderStatuses = async (req, res) => {
+  const { orderIds, status, reason } = req.body;
+
+  console.log(req.body);
+
+  try {
+    let existingOrders = await Order.find({ _id: { $in: orderIds } }, '_id');
+    let existingOrderIds = existingOrders.map(order => order._id.toString());
+
+    // Find order IDs that do not exist
+    let missingOrderIds = orderIds.filter(id => !existingOrderIds.includes(id));
+
+    if (missingOrderIds.length > 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Some orders not found", 
+        missingOrderIds 
+      });
+    }
+    // Prepare the update fields
+    let updateFields = { status };
+    if (status === 'canceled') {
+      updateFields.reason = reason;
+    }
+
+    // Update orders
+    let orders = await Order.updateMany(
+      { _id: { $in: orderIds } },
+      { $set: updateFields }
+    );
+
+    if (orders.nModified === 0) {
+      return res.status(404).json({ success: false, message: "No orders found to update" });
+    }
+
+    res.status(200).json({ success: true, message: 'orders updated successfully'});
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
+};
+
 
 // Update the isPaid status of an order
 // exports.updateIsPaidStatus = async (req, res) => {

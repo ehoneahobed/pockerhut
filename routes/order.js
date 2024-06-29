@@ -8,6 +8,8 @@ router.post("/", orderController.createOrder);
 // Update the order status
 router.put("/:id/status", orderController.updateOrderStatus);
 
+router.put('/update-multiple', orderController.updateMultipleOrderStatuses);
+
 // Update the isPaid status
 router.put("/:id/isPaid", orderController.updateIsPaidStatus);
 

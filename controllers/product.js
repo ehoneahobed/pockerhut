@@ -134,6 +134,59 @@ exports.updateApprovalStatus = async (req, res) => {
     }
 };
 
+
+exports.updateMultipleApprovalStatuses = async (req, res) => {
+    const { productIds, approvalStatus } = req.body;
+
+    if (!productIds || !Array.isArray(productIds)) {
+        return res.status(400).json({
+            message: "Product IDs must be provided as an array"
+        });
+    }
+
+    if (!approvalStatus) {
+        return res.status(400).json({
+            message: "Approval status must be provided"
+        });
+    }
+
+    try {
+        // Check if all product IDs exist
+        let existingProducts = await Product.find({ _id: { $in: productIds } }, '_id');
+        let existingProductIds = existingProducts.map(product => product._id.toString());
+
+        // Find product IDs that do not exist
+        let missingProductIds = productIds.filter(id => !existingProductIds.includes(id));
+
+        if (missingProductIds.length > 0) {
+            return res.status(404).json({
+                message: "Some products not found",
+                missingProductIds
+            });
+        }
+
+        // Update products
+        let updateResult = await Product.updateMany(
+            { _id: { $in: productIds } },
+            { $set: { approvalStatus } },
+            { new: true }
+        );
+
+        if (updateResult.nModified === 0) {
+            return res.status(404).json({
+                message: "No products were updated"
+            });
+        }
+
+        res.status(200).json({
+            message: 'products updated successfully'
+        });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Server Error");
+    }
+};
+
 // update visibilityStatus of a given product
 exports.updateVisibilityStatus = async (req, res) => {
     const id = req.params.id;
