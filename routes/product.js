@@ -14,6 +14,8 @@ router.post("/", uploadMultipleImages, uploadMultiToCloudinary, productControlle
 // update product approvalStatus
 router.put('/:id/approvalStatus', productController.updateApprovalStatus);
 
+router.put('/update-multiple', productController.updateMultipleApprovalStatuses);
+
 // Update product visibilityStatus
 router.put('/:id/visibilityStatus', productController.updateVisibilityStatus);
 

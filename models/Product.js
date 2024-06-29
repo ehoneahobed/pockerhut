@@ -54,9 +54,11 @@ const productDetailsSchema = new mongoose.Schema({
 const pricingSchema = new mongoose.Schema({
   saleStartDate: {
     type: Date,
+    default: null
   },
   saleEndDate: {
     type: Date,
+    default: null
   },
   productPrice: {
     type: Number,

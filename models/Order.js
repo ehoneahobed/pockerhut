@@ -130,6 +130,10 @@ const OrderSchema = new Schema({
   tax: {
     type: Number,
   },
+  reason:{
+    type: String,
+    required: false
+  },
   totalAmount: {
     type: Number,
     required: true,
@@ -140,7 +144,7 @@ const OrderSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "readyToGo", "failed", "completed"],
+    enum: ["pending", "readyToGo", "failed", "completed", "cancelled"],
     default: "pending",
   },
   isPaid: {
