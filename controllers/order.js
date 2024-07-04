@@ -66,26 +66,41 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// update the orderStatus of a given order
 exports.updateOrderStatus = async (req, res) => {
   const { status, reason } = req.body;
+
   try {
-    let updateFields = { status };
-
-    // If the status is "canceled", add the reason to the update fields
-    if (status === 'canceled') {
-      updateFields.reason = reason;
-    }
-
-    let order = await Order.findByIdAndUpdate(
-      req.params.id,
-      updateFields,
-      { new: true }
-    );
+    // Check if the order exists
+    let order = await Order.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
+    if(order.isPaid === false){
+      return res.status(404).json({ success: false, message: "Order is not paid" });
+    }
+    // Validate the status change
+    if (order.status === 'cancelled' && status === 'cancelled') {
+      return res.status(400).json({ success: false, message: "Order is already cancelled" });
+    }
+
+    // Create an update object
+    let updateFields = { status };
+
+    // If the status is "canceled", ensure the reason is provided
+    if (status === 'cancelled') {
+      if (!reason) {
+        return res.status(400).json({ success: false, message: "Reason is required when canceling an order" });
+      }
+      updateFields.reason = reason;
+    }
+
+    // Update the order
+    order = await Order.findByIdAndUpdate(
+      req.params.id,
+      updateFields,
+      { new: true, runValidators: true }
+    );
 
     res.status(200).json({ success: true, order });
   } catch (error) {
@@ -981,6 +996,7 @@ exports.getAllAdminOverview = async (req, res) => {
     const matchStage = {
       $match: {
         orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true
       },
     };
 
@@ -1082,6 +1098,82 @@ exports.getAllAdminOverview = async (req, res) => {
   }
 };
 // Adjust the path as necessary
+
+exports.getTopProducts = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate = startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+
+  try {
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true,
+      },
+    };
+
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+
+    const groupStage = {
+      $group: {
+        _id: "$productDetails.productID",
+        totalItemsSold: { $sum: "$productDetails.quantity" },
+        totalSales: { $sum: { $multiply: ["$productDetails.quantity", "$productDetails.price"] } }, // Calculate total sales
+        productInfo: { $first: "$productDetails" },
+      },
+    };
+
+    const sortStage = {
+      $sort: { totalItemsSold: -1 },
+    };
+
+    const lookupStage = {
+      $lookup: {
+        from: "products", // replace with your actual Product collection name
+        localField: "_id",
+        foreignField: "_id",
+        as: "productInfo",
+      },
+    };
+
+    const projectStage = {
+      $project: {
+        _id: 0,
+        productID: "$_id",
+        totalItemsSold: 1,
+        totalSales: 1,
+        productInfo: { $arrayElemAt: ["$productInfo", 0] },
+      },
+    };
+
+    const topProducts = await Order.aggregate([
+      matchStage,
+      unwindStage,
+      groupStage,
+      sortStage,
+      lookupStage,
+      projectStage,
+    ]);
+
+    if (topProducts.length > 0) {
+      res.json(topProducts);
+    } else {
+      res.status(404).json({ message: "No products found in the given date range." });
+    }
+  } catch (error) {
+    console.error("Error fetching top products:", error);
+    res.status(500).json({
+      message: "Server error occurred while fetching top products.",
+    });
+  }
+};
+
+
 
 exports.getProductAnalytics = async (req, res) => {
   let { startDate, endDate } = req.query;
@@ -1210,6 +1302,7 @@ exports.getTopProductsBySales = async (req, res) => {
     const matchStage = {
       $match: {
         orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true
       },
     };
 
