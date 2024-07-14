@@ -30,6 +30,7 @@ const trackingRoutes = require('./routes/tracking');
 const ratingRoutes = require('./routes/rating');
 const announcementRoutes = require('./routes/announcement');
 const favoriteProductRoutes = require('./routes/favoriteProduct');
+const PaymentInvoiceRoutes = require('./routes/paymentInvoice');
 
 // connecting to database
 mongoose.set('strictQuery', true);
@@ -71,3 +72,4 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/announcement', announcementRoutes);
 app.use('/api/favorite-product', favoriteProductRoutes);
+app.use('/api/payment-invoice', PaymentInvoiceRoutes)

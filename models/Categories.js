@@ -41,7 +41,13 @@ const categorySchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Subcategory"
       }
-    ]
+    ],
+    deliveryFeeRate: {
+      type: Number,
+    },
+    commissionRate: {
+      type: Number,
+    }
   },
   { timestamps: true }
 );

@@ -7,7 +7,7 @@ const {Product} = require('../models/Product')
 // Create a new category
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description, featuredImage } = req.body;
+    const { name, description, featuredImage, commissionRate, deliveryFeeRate } = req.body;
     const existingcategory = await Category.findOne({ name });
 
     if (existingcategory) {
@@ -19,6 +19,8 @@ exports.createCategory = async (req, res) => {
       name,
       description,
       featuredImage,
+      commissionRate,
+      deliveryFeeRate
     });
 
     // Save the category to the database
@@ -34,8 +36,7 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    const { name, description, featuredImage } = req.body;
-
+    const { name, description, featuredImage, deliveryFeeRate, commissionRate } = req.body;
     // Find the category by ID
     const category = await Category.findById(categoryId);
 
@@ -52,6 +53,12 @@ exports.updateCategory = async (req, res) => {
     }
     if (featuredImage) {
       category.featuredImage = featuredImage;
+    }
+    if (deliveryFeeRate) {
+      category.deliveryFeeRate = deliveryFeeRate;
+    }
+    if (commissionRate) {
+      category.commissionRate = commissionRate;
     }
 
     // Save the updated category to the database

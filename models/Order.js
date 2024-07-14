@@ -96,9 +96,6 @@ const ProductDetailSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "Vendor",
   },
-  deliveryFeePerProduct: {
-    type: Number
-  },
   deliveryOption: {
     type: String,
     enum: ["pickup", "delivery"],
@@ -150,7 +147,7 @@ const OrderSchema = new Schema({
   isPaid: {
     type: Boolean,
     default: false
-  }
+  },
 });
 
 const Order = mongoose.model("Order", OrderSchema);

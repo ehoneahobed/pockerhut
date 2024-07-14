@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
-const Product = require("../models/Product");
+const { Product } = require("../models/Product");
+const { Category } = require("../models/Categories");
 const mongoose = require("mongoose");
 
 // create new order
@@ -41,6 +42,37 @@ exports.createOrder = async (req, res) => {
     return res.status(400).send({ message: "Product details are required" });
   }
 
+  const productIds = productDetails.map((pd) => pd.productID);
+  const products = await Product.find({ _id: { $in: productIds } });
+  const categoryIds = products.map((product) => product.information?.category);
+
+  if (categoryIds.length === 0 || categoryIds.includes(undefined)) {
+    return res.status(400).send({ message: "Product category is required" });
+  }
+
+  const categories = await Category.find({ _id: { $in: categoryIds } });
+
+  let totalCommission = 0;
+  let totalDeliveryFee = 0;
+
+  // Calculate total commission and delivery fees using a for loop
+  for (let i = 0; i < products.length; i++) {
+    const product = products[i];
+    const category = categories.find(
+      (cat) => cat._id.equals(product.information?.category)
+    );
+
+    if (category) {
+      const commissionRate = category.commissionRate || 0;
+      totalCommission += (commissionRate / 100) * subtotal;
+      const deliveryFeeRate = category.deliveryFeeRate || 0;
+      totalDeliveryFee += (deliveryFeeRate / 100) * subtotal;
+    }
+  }
+
+  console.log(`Total Commission: ${totalCommission}`);
+  console.log(`Total Delivery Fee: ${totalDeliveryFee}`);
+
   try {
     let order = new Order({
       customer,
@@ -52,9 +84,9 @@ exports.createOrder = async (req, res) => {
         orderNotes: pd.orderNotes,
       })),
       subtotal,
-      deliveryFee,
+      deliveryFee: Math.floor(totalDeliveryFee),
       tax,
-      totalAmount,
+      totalAmount: subtotal + Math.floor(totalCommission) + Math.floor(totalDeliveryFee) + tax,
       billingInformation,
     });
 
@@ -68,39 +100,46 @@ exports.createOrder = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   const { status, reason } = req.body;
-
   try {
     // Check if the order exists
     let order = await Order.findById(req.params.id);
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
-    if(order.isPaid === false){
-      return res.status(404).json({ success: false, message: "Order is not paid" });
+    if (order.isPaid === false) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order is not paid" });
     }
     // Validate the status change
-    if (order.status === 'cancelled' && status === 'cancelled') {
-      return res.status(400).json({ success: false, message: "Order is already cancelled" });
+    if (order.status === "cancelled" && status === "cancelled") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order is already cancelled" });
     }
 
     // Create an update object
     let updateFields = { status };
 
     // If the status is "canceled", ensure the reason is provided
-    if (status === 'cancelled') {
+    if (status === "cancelled") {
       if (!reason) {
-        return res.status(400).json({ success: false, message: "Reason is required when canceling an order" });
+        return res.status(400).json({
+          success: false,
+          message: "Reason is required when canceling an order",
+        });
       }
       updateFields.reason = reason;
     }
 
     // Update the order
-    order = await Order.findByIdAndUpdate(
-      req.params.id,
-      updateFields,
-      { new: true, runValidators: true }
-    );
+    order = await Order.findByIdAndUpdate(req.params.id, updateFields, {
+      new: true,
+      runValidators: true,
+    });
 
     res.status(200).json({ success: true, order });
   } catch (error) {
@@ -115,22 +154,24 @@ exports.updateMultipleOrderStatuses = async (req, res) => {
   console.log(req.body);
 
   try {
-    let existingOrders = await Order.find({ _id: { $in: orderIds } }, '_id');
-    let existingOrderIds = existingOrders.map(order => order._id.toString());
+    let existingOrders = await Order.find({ _id: { $in: orderIds } }, "_id");
+    let existingOrderIds = existingOrders.map((order) => order._id.toString());
 
     // Find order IDs that do not exist
-    let missingOrderIds = orderIds.filter(id => !existingOrderIds.includes(id));
+    let missingOrderIds = orderIds.filter(
+      (id) => !existingOrderIds.includes(id)
+    );
 
     if (missingOrderIds.length > 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Some orders not found", 
-        missingOrderIds 
+      return res.status(404).json({
+        success: false,
+        message: "Some orders not found",
+        missingOrderIds,
       });
     }
     // Prepare the update fields
     let updateFields = { status };
-    if (status === 'canceled') {
+    if (status === "canceled") {
       updateFields.reason = reason;
     }
 
@@ -141,16 +182,19 @@ exports.updateMultipleOrderStatuses = async (req, res) => {
     );
 
     if (orders.nModified === 0) {
-      return res.status(404).json({ success: false, message: "No orders found to update" });
+      return res
+        .status(404)
+        .json({ success: false, message: "No orders found to update" });
     }
 
-    res.status(200).json({ success: true, message: 'orders updated successfully'});
+    res
+      .status(200)
+      .json({ success: true, message: "orders updated successfully" });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");
   }
 };
-
 
 // Update the isPaid status of an order
 // exports.updateIsPaidStatus = async (req, res) => {
@@ -728,12 +772,10 @@ exports.getAggregatedOrdersByAllUsers = async (req, res) => {
     res.json(aggregation);
   } catch (error) {
     console.error("Error fetching aggregated order data for all users:", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "Server error occurred while fetching aggregated data for all users.",
-      });
+    res.status(500).json({
+      message:
+        "Server error occurred while fetching aggregated data for all users.",
+    });
   }
 };
 
@@ -996,7 +1038,7 @@ exports.getAllAdminOverview = async (req, res) => {
     const matchStage = {
       $match: {
         orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
-        isPaid: true
+        isPaid: true,
       },
     };
 
@@ -1104,8 +1146,8 @@ exports.getTopProducts = async (req, res) => {
 
   // Set default values for startDate and endDate if not provided
   endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
-  startDate = startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
-
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
 
   try {
     const matchStage = {
@@ -1123,7 +1165,11 @@ exports.getTopProducts = async (req, res) => {
       $group: {
         _id: "$productDetails.productID",
         totalItemsSold: { $sum: "$productDetails.quantity" },
-        totalSales: { $sum: { $multiply: ["$productDetails.quantity", "$productDetails.price"] } }, // Calculate total sales
+        totalSales: {
+          $sum: {
+            $multiply: ["$productDetails.quantity", "$productDetails.price"],
+          },
+        }, // Calculate total sales
         productInfo: { $first: "$productDetails" },
       },
     };
@@ -1163,7 +1209,9 @@ exports.getTopProducts = async (req, res) => {
     if (topProducts.length > 0) {
       res.json(topProducts);
     } else {
-      res.status(404).json({ message: "No products found in the given date range." });
+      res
+        .status(404)
+        .json({ message: "No products found in the given date range." });
     }
   } catch (error) {
     console.error("Error fetching top products:", error);
@@ -1172,8 +1220,6 @@ exports.getTopProducts = async (req, res) => {
     });
   }
 };
-
-
 
 exports.getProductAnalytics = async (req, res) => {
   let { startDate, endDate } = req.query;
@@ -1192,7 +1238,7 @@ exports.getProductAnalytics = async (req, res) => {
     const matchStage = {
       $match: {
         orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
-        isPaid: true
+        isPaid: true,
       },
     };
 
@@ -1276,11 +1322,9 @@ exports.getProductAnalytics = async (req, res) => {
     if (productAnalytics.length > 0) {
       res.json(productAnalytics);
     } else {
-      res
-        .status(404)
-        .json({
-          message: "No product sales data found in the given date range.",
-        });
+      res.status(404).json({
+        message: "No product sales data found in the given date range.",
+      });
     }
   } catch (error) {
     console.error("Error fetching product analytics data:", error);
@@ -1302,7 +1346,7 @@ exports.getTopProductsBySales = async (req, res) => {
     const matchStage = {
       $match: {
         orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
-        isPaid: true
+        isPaid: true,
       },
     };
 
@@ -1359,11 +1403,9 @@ exports.getTopProductsBySales = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching top products by sales:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching top products by sales.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching top products by sales.",
+    });
   }
 };
 
