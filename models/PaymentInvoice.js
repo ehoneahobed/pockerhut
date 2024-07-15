@@ -13,7 +13,7 @@ const paymentInvoiceSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ['pending', 'paid', 'unpaid', 'overdue']
+        enum: ['paid', 'unpaid', 'overdue']
     },
     startDate: {
         type: Date,

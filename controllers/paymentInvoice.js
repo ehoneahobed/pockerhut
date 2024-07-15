@@ -50,7 +50,6 @@ exports.createPaymentInvoice = async (order) => {
         existingInvoice.salesRevenue += productDetail.totalPrice;
         existingInvoice.order.push(order);
         await existingInvoice.save();
-
         console.log("Existing Payment Invoice updated successfully");
       } else {
         // Create a new invoice for the vendor
@@ -58,7 +57,7 @@ exports.createPaymentInvoice = async (order) => {
           vendor: vendor._id,
           payout: payout,
           salesRevenue: productDetail.totalPrice,
-          status: "pending",
+          status: "unpaid",
           startDate: startDate,
           dueDate: dueDate,
           currentWeek: getCurrentWeek(),
@@ -76,34 +75,46 @@ exports.createPaymentInvoice = async (order) => {
 
 exports.getAllPaymentInvoices = async (req, res) => {
   try {
-    const invoices = await PaymentInvoice.find({})
+    const { month, year } = req.query;
+
+    // Calculate the start and end dates for the filter
+    const currentDate = new Date();
+    const filterMonth = month ? parseInt(month) - 1 : currentDate.getMonth();
+    const filterYear = year ? parseInt(year) : currentDate.getFullYear();
+
+    const startDate = new Date(filterYear, filterMonth, 1);
+    const endDate = new Date(filterYear, filterMonth + 1, 0);
+
+    const invoices = await PaymentInvoice.find({
+      startDate: { $gte: startDate },
+      dueDate: { $lte: endDate }
+    })
       .populate({
         path: "vendor",
         model: "Vendor",
+        select: "-sellerAccountInformation.password" // Exclude the password field
       })
       .populate({
         path: "order",
         populate: {
           path: "productDetails.productID",
-          model: "Product",
-        },
-      })
-      .populate({
-        path: "order.productDetails.vendor",
-        model: "Vendor",
+          model: "Product"
+        }
       });
 
     // Enhance invoices with total orders and sales revenue for the range
     const enhancedInvoices = await Promise.all(
       invoices.map(async (invoice) => {
-        const startDate = invoice.startDate;
-        const endDate = invoice.dueDate;
+        const invoiceStartDate = invoice.startDate;
+        const invoiceEndDate = invoice.dueDate;
+        
         // Find orders within the date range
         const ordersInRange = await Order.find({
           vendor: invoice.vendor._id,
-          orderDate: { $gte: startDate, $lte: endDate },
-          isPaid: true,
+          orderDate: { $gte: invoiceStartDate, $lte: invoiceEndDate },
+          isPaid: true
         });
+
         const salesRevenue = ordersInRange.reduce(
           (sum, order) => sum + order.totalAmount,
           0
@@ -114,22 +125,24 @@ exports.getAllPaymentInvoices = async (req, res) => {
         return {
           ...invoice._doc,
           totalOrders,
-          salesRevenue,
+          salesRevenue
         };
       })
     );
+
     return res.status(200).json({
       success: true,
       count: enhancedInvoices.length,
-      data: enhancedInvoices,
+      data: enhancedInvoices
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: "Server Error",
+      error: "Server Error"
     });
   }
 };
+
 exports.updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -160,34 +173,72 @@ exports.updateStatus = async (req, res) => {
 };
 exports.updateMultipleStatuses = async (req, res) => {
   try {
-    const { ids } = req.body;
-    const { status } = req.body;
+    const { ids, status } = req.body;
+
+    if (!ids || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "IDs and status are required",
+      });
+    }
+
+    let existingInvoices = await PaymentInvoice.find({ _id: { $in: ids } }, "_id");
+    let existingOrderIds = existingInvoices.map((invoice) => invoice._id.toString());
+
+    let missingOrderIds = ids.filter(
+      (id) => !existingOrderIds.includes(id)
+    );
+
+    if (missingOrderIds.length > 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Some invoices not found",
+        missingOrderIds,
+      });
+    }
 
     const updatedInvoices = await PaymentInvoice.updateMany(
       { _id: { $in: ids } },
-      { status }
+      { $set: { status } },
+      { new: true }
     );
+
     return res.status(200).json({
       success: true,
+      message: "Invoices updated successfully",
       data: updatedInvoices,
     });
   } catch (error) {
+    console.error("Error updating invoice statuses:", error);
     res.status(500).json({
       success: false,
       error: "Server Error",
     });
   }
 };
+
 exports.getInvoiceTotals = async (req, res) => {
   try {
     const totalPaid = await PaymentInvoice.aggregate([
       { $match: { status: "paid" } },
-      { $group: { _id: null, totalAmount: { $sum: "$payout" } } },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$payout" },
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const totalUnpaid = await PaymentInvoice.aggregate([
-      { $match: { status: { $in: ["unpaid", "pending"] } } },
-      { $group: { _id: null, totalAmount: { $sum: "$payout" } } },
+      { $match: { status: "unpaid" } },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$payout" },
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const totalDue = await PaymentInvoice.aggregate([
@@ -199,18 +250,30 @@ exports.getInvoiceTotals = async (req, res) => {
           status: "unpaid",
         },
       },
-      { $group: { _id: null, totalAmount: { $sum: "$payout" } } },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$payout" },
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const totalInvoices = await PaymentInvoice.aggregate([
-      { $group: { _id: null, totalAmount: { $sum: "$payout" } } },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$payout" },
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     res.status(200).json({
-      totalPaid: totalPaid[0] ? totalPaid[0].totalAmount : 0,
-      totalUnpaid: totalUnpaid[0] ? totalUnpaid[0].totalAmount : 0,
-      totalDue: totalDue[0] ? totalDue[0].totalAmount : 0,
-      totalInvoices: totalInvoices[0] ? totalInvoices[0].totalAmount : 0,
+      totalPaid: totalPaid[0] ? { amount: totalPaid[0].totalAmount, count: totalPaid[0].count } : { amount: 0, count: 0 },
+      totalUnpaid: totalUnpaid[0] ? { amount: totalUnpaid[0].totalAmount, count: totalUnpaid[0].count } : { amount: 0, count: 0 },
+      totalDue: totalDue[0] ? { amount: totalDue[0].totalAmount, count: totalDue[0].count } : { amount: 0, count: 0 },
+      totalInvoices: totalInvoices[0] ? { amount: totalInvoices[0].totalAmount, count: totalInvoices[0].count } : { amount: 0, count: 0 },
     });
   } catch (error) {
     console.error("Error fetching invoice totals:", error);
