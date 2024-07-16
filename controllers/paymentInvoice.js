@@ -219,67 +219,96 @@ exports.updateMultipleStatuses = async (req, res) => {
 
 exports.getInvoiceTotals = async (req, res) => {
   try {
-    const totalPaid = await PaymentInvoice.aggregate([
-      { $match: { status: "paid" } },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: "$payout" },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const totalUnpaid = await PaymentInvoice.aggregate([
-      { $match: { status: "unpaid" } },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: "$payout" },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const totalDue = await PaymentInvoice.aggregate([
-      {
-        $match: {
-          dueDate: {
-            $lte: new Date(new Date().setDate(new Date().getDate() - 1)),
-          },
-          status: "unpaid",
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: "$payout" },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
     const totalInvoices = await PaymentInvoice.aggregate([
       {
         $group: {
-          _id: null,
-          totalAmount: { $sum: "$payout" },
-          count: { $sum: 1 },
-        },
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          totalPaidAmount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "paid"] }, "$payout", 0]
+            }
+          },
+          totalUnpaidAmount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "unpaid"] }, "$payout", 0]
+            }
+          },
+          totalDueAmount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "unpaid"] },
+                    { $lte: ["$dueDate", new Date(new Date().setDate(new Date().getDate() - 1))] }
+                  ]
+                },
+                "$payout",
+                0
+              ]
+            }
+          },
+          paidCount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "paid"] }, 1, 0]
+            }
+          },
+          unpaidCount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0]
+            }
+          },
+          dueCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "unpaid"] },
+                    { $lte: ["$dueDate", new Date(new Date().setDate(new Date().getDate() - 1))] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          createdAt: { $first: "$createdAt" }
+        }
       },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
     ]);
 
-    res.status(200).json({
-      totalPaid: totalPaid[0] ? { amount: totalPaid[0].totalAmount, count: totalPaid[0].count } : { amount: 0, count: 0 },
-      totalUnpaid: totalUnpaid[0] ? { amount: totalUnpaid[0].totalAmount, count: totalUnpaid[0].count } : { amount: 0, count: 0 },
-      totalDue: totalDue[0] ? { amount: totalDue[0].totalAmount, count: totalDue[0].count } : { amount: 0, count: 0 },
-      totalInvoices: totalInvoices[0] ? { amount: totalInvoices[0].totalAmount, count: totalInvoices[0].count } : { amount: 0, count: 0 },
-    });
+    const result = totalInvoices.map(invoice => ({
+      totalPaid: {
+        amount: invoice.totalPaidAmount || 0,
+        count: invoice.paidCount || 0,
+      },
+      totalUnpaid: {
+        amount: invoice.totalUnpaidAmount || 0,
+        count: invoice.unpaidCount || 0,
+      },
+      totalDue: {
+        amount: invoice.totalDueAmount || 0,
+        count: invoice.dueCount || 0,
+      },
+      totalInvoices: {
+        amount: (invoice.totalPaidAmount || 0) + (invoice.totalUnpaidAmount || 0),
+        count: (invoice.paidCount || 0) + (invoice.unpaidCount || 0),
+      },
+      createdAt: invoice.createdAt
+    }));
+
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.error("Error fetching invoice totals:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
 
 // Function to get the current week number
 const getCurrentWeek = () => {
