@@ -76,7 +76,7 @@ exports.uploadToCloudinary = async (req, res, next) => {
   try {
     // Check if there is a file uploaded by Multer
     if (!req.file) {
-      throw new Error("No file uploaded");
+      return next();
     }
 
     console.log({ file: req.file });
