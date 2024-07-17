@@ -1,5 +1,6 @@
 // Assuming you have Order and PaymentInvoice models already defined
 const Order = require("../models/Order");
+const mongoose = require("mongoose");
 const PaymentInvoice = require("../models/PaymentInvoice");
 const Vendor = require("../models/Vendor");
 const { Category } = require("../models/Categories");
@@ -101,6 +102,84 @@ exports.getAllPaymentInvoices = async (req, res) => {
           model: "Product"
         }
       });
+    // Enhance invoices with total orders and sales revenue for the range
+    const enhancedInvoices = await Promise.all(
+      invoices.map(async (invoice) => {
+        const invoiceStartDate = invoice.startDate;
+        const invoiceEndDate = invoice.dueDate;
+        
+        // Find orders within the date range
+        const ordersInRange = await Order.find({
+          vendor: invoice.vendor._id,
+          orderDate: { $gte: invoiceStartDate, $lte: invoiceEndDate },
+          isPaid: true
+        });
+        const salesRevenue = ordersInRange.reduce(
+          (sum, order) => sum + order.totalAmount,
+          0
+        );
+        // Calculate total orders and sales revenue
+        const totalOrders = ordersInRange.length;
+        return {
+          ...invoice._doc,
+          totalOrders,
+          salesRevenue,
+          charges: salesRevenue - invoice.payout
+        };
+      })
+    );
+    return res.status(200).json({
+      success: true,
+      count: enhancedInvoices.length,
+      data: enhancedInvoices
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Server Error"
+    });
+  }
+};
+exports.getVendorPaymentInvoices = async (req, res) => {
+  try {
+    const {vendorId} = req.params
+    const { month, year } = req.query;
+
+    if (!vendorId) {
+      return res.status(400).json({ success: false, error: "Vendor ID is required" });
+    }
+    const vendor = await Vendor.findOne({
+      _id: vendorId
+    });
+    if (!vendor) {
+      return res.status(404).json({ success: false, error: "Vendor not found" });
+    }
+
+    // Calculate the start and end dates for the filter
+    const currentDate = new Date();
+    const filterMonth = month ? parseInt(month) - 1 : currentDate.getMonth();
+    const filterYear = year ? parseInt(year) : currentDate.getFullYear();
+
+    const startDate = new Date(filterYear, filterMonth, 1);
+    const endDate = new Date(filterYear, filterMonth + 1, 0);
+
+    const invoices = await PaymentInvoice.find({
+      vendor: vendorId,
+      startDate: { $gte: startDate },
+      dueDate: { $lte: endDate }
+    })
+      .populate({
+        path: "vendor",
+        model: "Vendor",
+        select: "-sellerAccountInformation.password" // Exclude the password field
+      })
+      .populate({
+        path: "order",
+        populate: {
+          path: "productDetails.productID",
+          model: "Product"
+        }
+      });
 
     // Enhance invoices with total orders and sales revenue for the range
     const enhancedInvoices = await Promise.all(
@@ -142,7 +221,121 @@ exports.getAllPaymentInvoices = async (req, res) => {
     });
   }
 };
+exports.getVendorStatementTotals = async (req, res) => {
+  try {
+    const { vendorId } = req.params;
 
+    if (!vendorId) {
+      return res.status(400).json({ success: false, error: "Vendor ID is required" });
+    }
+    const vendor = await Vendor.findOne({
+      _id: vendorId
+    });
+    if (!vendor) {
+      return res.status(404).json({ success: false, error: "Vendor not found" });
+    }
+
+
+    const vendorObjectId = mongoose.Types.ObjectId(vendorId);
+
+    const earliestDueDateInvoice = await PaymentInvoice.findOne({ vendor: vendorObjectId });
+    if (!earliestDueDateInvoice) {
+      return res.status(404).json({ success: false, error: "No invoices found for the vendor" });
+    }
+    const invoices = await PaymentInvoice.aggregate([
+      { $match: { vendor: vendorObjectId } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          totalPaidAmount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "paid"] }, "$payout", 0]
+            }
+          },
+          totalUnpaidAmount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "unpaid"] }, "$payout", 0]
+            }
+          },
+          totalDueAmount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "unpaid"] },
+                    { $lte: ["$dueDate", (earliestDueDateInvoice.dueDate)-1] }
+                  ]
+                },
+                "$payout",
+                0
+              ]
+            }
+          },
+          paidCount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "paid"] }, 1, 0]
+            }
+          },
+          unpaidCount: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0]
+            }
+          },
+          dueCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "unpaid"] },
+                    { $lte: ["$dueDate",  (earliestDueDateInvoice.dueDate)-1] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          createdAt: { $first: "$createdAt" }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+    const openStatementInvoices = await PaymentInvoice.find({
+      vendor: vendorObjectId,
+      status: { $ne: "paid" },
+      dueDate: { $gte: new Date() }
+    });
+
+    const openStatementAmount = openStatementInvoices.reduce((sum, invoice) => sum + invoice.salesRevenue, 0);
+
+    const result = invoices.map(invoice => ({
+      totalPaid: {
+        amount: invoice.totalPaidAmount || 0,
+        count: invoice.paidCount || 0,
+      },
+      totalDueAndUnpaid: {
+        amount: invoice.totalDueAmount + invoice.totalUnpaidAmount|| 0,
+        count: invoice.dueCount + invoice.unpaidCount || 0,
+      },
+      createdAt: invoice.createdAt
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+      openStatement: {
+        amount: openStatementAmount,
+        invoices: openStatementInvoices
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching statement totals:", error);
+    res.status(500).json({ message:error.message });
+  }
+};
 exports.updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
