@@ -33,7 +33,7 @@ exports.createPaymentInvoice = async (order) => {
       const deliveryFee = productDetail.totalPrice * (deliveryFeeRate / 100);
       const commission = productDetail.totalPrice * (commissionRate / 100);
 
-      let payout = productDetail.totalPrice - deliveryFee - commission;
+      let payout = orders.subtotal - (deliveryFee + commission);
       payout = Math.floor(payout);
 
       const startDate = orders.orderDate;
@@ -84,11 +84,14 @@ exports.getAllPaymentInvoices = async (req, res) => {
     const filterYear = year ? parseInt(year) : currentDate.getFullYear();
 
     const startDate = new Date(filterYear, filterMonth, 1);
-    const endDate = new Date(filterYear, filterMonth + 1, 0);
+    const endDate = new Date(filterYear, filterMonth + 1, 0, 23, 59, 59, 999); // Adjust to include entire last day
+
+    console.log(`Start Date: ${startDate}`);
+    console.log(`End Date: ${endDate}`);
 
     const invoices = await PaymentInvoice.find({
-      startDate: { $gte: startDate },
-      dueDate: { $lte: endDate }
+      startDate: { $lte: new Date() },
+      dueDate: { $gte: new Date() }
     })
       .populate({
         path: "vendor",
@@ -107,6 +110,8 @@ exports.getAllPaymentInvoices = async (req, res) => {
       invoices.map(async (invoice) => {
         const invoiceStartDate = invoice.startDate;
         const invoiceEndDate = invoice.dueDate;
+
+        console.log(`Invoice vendor: ${invoice.vendor._id}`);
         
         // Find orders within the date range
         const ordersInRange = await Order.find({
@@ -118,13 +123,18 @@ exports.getAllPaymentInvoices = async (req, res) => {
           (sum, order) => sum + order.totalAmount,
           0
         );
+        const tax = ordersInRange.reduce(
+          (sum, order) => sum + order.tax,0
+        );
+        console.log('pay',invoice.payout);
+        console.log('tax',tax);
         // Calculate total orders and sales revenue
         const totalOrders = ordersInRange.length;
         return {
           ...invoice._doc,
           totalOrders,
           salesRevenue,
-          charges: salesRevenue - invoice.payout
+          charges: salesRevenue - (invoice.payout + tax)
         };
       })
     );
@@ -307,6 +317,18 @@ exports.getVendorStatementTotals = async (req, res) => {
       vendor: vendorObjectId,
       status: { $ne: "paid" },
       dueDate: { $gte: new Date() }
+    })
+    .populate({
+      path: "vendor",
+      model: "Vendor",
+      select: "-sellerAccountInformation.password" // Exclude the password field
+    })
+    .populate({
+      path: "order",
+      populate: {
+        path: "productDetails.productID",
+        model: "Product"
+      }
     });
 
     const openStatementAmount = openStatementInvoices.reduce((sum, invoice) => sum + invoice.salesRevenue, 0);
