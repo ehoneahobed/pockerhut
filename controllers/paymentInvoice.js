@@ -27,15 +27,14 @@ exports.createPaymentInvoice = async (order) => {
         throw new Error(`Category not found for product: ${product._id}`);
       }
 
-      const deliveryFeeRate = category.deliveryFeeRate || 0;
+      // const deliveryFeeRate = category.deliveryFeeRate || 0;
       const commissionRate = category.commissionRate || 0;
 
-      const deliveryFee = productDetail.totalPrice * (deliveryFeeRate / 100);
+      // const deliveryFee = productDetail.totalPrice * (deliveryFeeRate / 100);
       const commission = productDetail.totalPrice * (commissionRate / 100);
 
-      let payout = orders.subtotal - (deliveryFee + commission);
+      let payout = orders.subtotal - (commission);
       payout = Math.floor(payout);
-
       const startDate = orders.orderDate;
       const dueDate = new Date(new Date().setDate(new Date().getDate() + 15));
 
@@ -189,8 +188,7 @@ exports.getVendorPaymentInvoices = async (req, res) => {
           path: "productDetails.productID",
           model: "Product"
         }
-      });
-
+      })
     // Enhance invoices with total orders and sales revenue for the range
     const enhancedInvoices = await Promise.all(
       invoices.map(async (invoice) => {
@@ -432,6 +430,93 @@ exports.updateMultipleStatuses = async (req, res) => {
   }
 };
 
+exports.getPaymentTracker = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const currentDate = new Date();
+    const filterMonth = month ? parseInt(month) - 1 : currentDate.getMonth();
+    const filterYear = year ? parseInt(year) : currentDate.getFullYear();
+
+    const startDate = new Date(filterYear, filterMonth, 1);
+    const endDate = new Date(filterYear, filterMonth + 1, 0, 23, 59, 59, 999); // Adjust to include entire last day
+
+    const invoices = await PaymentInvoice.find({
+      startDate: { $lte: new Date() },
+      dueDate: { $gte: new Date() }
+    })
+      .populate({
+        path: "vendor",
+        model: "Vendor",
+        select: "-sellerAccountInformation.password" // Exclude the password field
+      })
+      .populate({
+        path: "order",
+        populate: {
+          path: "productDetails.productID",
+          model: "Product"
+        }
+      });
+
+    // Enhance invoices with total orders, returned orders, and sales revenue for the range
+    const enhancedInvoices = await Promise.all(
+      invoices.map(async (invoice) => {
+        const invoiceStartDate = invoice.startDate;
+        const invoiceEndDate = invoice.dueDate;
+
+        // Find orders within the date range
+        const ordersInRange = await Order.find({
+          vendor: invoice.vendor._id,
+          orderDate: { $gte: invoiceStartDate, $lte: invoiceEndDate },
+          isPaid: true
+        });
+
+        const salesRevenue = ordersInRange.reduce(
+          (sum, order) => sum + order.totalAmount,
+          0
+        );
+
+        const commissionFee = ordersInRange.reduce((sum, order) => {
+          const category = order.productDetails[0]?.productID?.information?.category;
+          const commissionRate = category ? category.commissionRate / 100 : 0;
+          return sum + (order.totalAmount * commissionRate);
+        }, 0);
+
+        const charges = salesRevenue - commissionFee;
+
+        // Calculate total orders and returned orders
+        const totalOrders = ordersInRange.length;
+        const returnedOrders = ordersInRange.filter(order => order.status === 'returned').length;
+
+        return {
+          vendorName: invoice.vendor.vendorName,
+          storeName: invoice.vendor.storeName,
+          period: invoice,
+          totalOrders,
+          returned: returnedOrders,
+          salesRevenue,
+          charges,
+          refundOnFees: 0,
+          payout: invoice.payout
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      count: enhancedInvoices.length,
+      data: enhancedInvoices
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Server Error"
+    });
+  }
+};
+
+
+
+
 exports.getInvoiceTotals = async (req, res) => {
   try {
     const totalInvoices = await PaymentInvoice.aggregate([
@@ -453,16 +538,7 @@ exports.getInvoiceTotals = async (req, res) => {
           },
           totalDueAmount: {
             $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$status", "unpaid"] },
-                    { $lte: ["$dueDate", new Date(new Date().setDate(new Date().getDate() - 1))] }
-                  ]
-                },
-                "$payout",
-                0
-              ]
+              $cond: [{ $eq: ["$status", "overdue"] }, "$payout", 0]
             }
           },
           paidCount: {
@@ -471,23 +547,14 @@ exports.getInvoiceTotals = async (req, res) => {
             }
           },
           unpaidCount: {
-            $sum: {
+           $sum: {
               $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0]
-            }
+            } 
           },
           dueCount: {
             $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$status", "unpaid"] },
-                    { $lte: ["$dueDate", new Date(new Date().setDate(new Date().getDate() - 1))] }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
+              $cond: [{ $eq: ["$status", "overdue"] }, 1, 0]
+            } 
           },
           createdAt: { $first: "$createdAt" }
         }
@@ -518,9 +585,32 @@ exports.getInvoiceTotals = async (req, res) => {
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.error("Error fetching invoice totals:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "2Server error" });
   }
 };
+const updateOverdueInvoices = async () => {
+  try {
+    const currentDate = new Date();
+    const overdueInvoices = await PaymentInvoice.find({
+      dueDate: { $lt: currentDate },
+      status: { $ne: 'overdue' }
+    });
+
+    for (let invoice of overdueInvoices) {
+      invoice.status = 'overdue';
+      await invoice.save();
+    }
+
+    console.log(`Updated ${overdueInvoices.length} invoices to overdue status.`);
+  } catch (error) {
+    console.error('Error updating overdue invoices:', error);
+  }
+};
+
+// Schedule the update function to run periodically
+const schedule = require('node-schedule');
+schedule.scheduleJob('0 0 * * *', updateOverdueInvoices);// Runs every day at midnight
+
 
 
 
