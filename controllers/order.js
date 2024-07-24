@@ -31,7 +31,6 @@ exports.createOrder = async (req, res) => {
     productDetails,
     subtotal,
     deliveryFee,
-    tax,
     totalAmount,
     billingInformation,
     orderNotes,
@@ -53,7 +52,7 @@ exports.createOrder = async (req, res) => {
   const categories = await Category.find({ _id: { $in: categoryIds } });
 
   let totalCommission = 0;
-  let totalDeliveryFee = 0;
+  // let totalDeliveryFee = 0;
 
   // Calculate total commission and delivery fees using a for loop
   for (let i = 0; i < products.length; i++) {
@@ -65,13 +64,12 @@ exports.createOrder = async (req, res) => {
     if (category) {
       const commissionRate = category.commissionRate || 0;
       totalCommission += (commissionRate / 100) * subtotal;
-      const deliveryFeeRate = category.deliveryFeeRate || 0;
-      totalDeliveryFee += (deliveryFeeRate / 100) * subtotal;
+      // const deliveryFeeRate = category.deliveryFeeRate || 0;
+      // totalDeliveryFee += (deliveryFeeRate / 100) * subtotal;
     }
   }
 
   console.log(`Total Commission: ${totalCommission}`);
-  console.log(`Total Delivery Fee: ${totalDeliveryFee}`);
 
   try {
     let order = new Order({
@@ -84,9 +82,8 @@ exports.createOrder = async (req, res) => {
         orderNotes: pd.orderNotes,
       })),
       subtotal,
-      deliveryFee: Math.floor(totalDeliveryFee),
-      tax,
-      totalAmount: subtotal + Math.floor(totalCommission) + Math.floor(totalDeliveryFee) + tax,
+      deliveryFee,
+      totalAmount: totalAmount + Math.floor(totalCommission),
       billingInformation,
     });
 

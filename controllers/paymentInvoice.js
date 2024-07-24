@@ -437,9 +437,6 @@ exports.getPaymentTracker = async (req, res) => {
     const filterMonth = month ? parseInt(month) - 1 : currentDate.getMonth();
     const filterYear = year ? parseInt(year) : currentDate.getFullYear();
 
-    const startDate = new Date(filterYear, filterMonth, 1);
-    const endDate = new Date(filterYear, filterMonth + 1, 0, 23, 59, 59, 999); // Adjust to include entire last day
-
     const invoices = await PaymentInvoice.find({
       startDate: { $lte: new Date() },
       dueDate: { $gte: new Date() }
@@ -470,19 +467,14 @@ exports.getPaymentTracker = async (req, res) => {
           isPaid: true
         });
 
-        const salesRevenue = ordersInRange.reduce(
-          (sum, order) => sum + order.totalAmount,
-          0
-        );
+        // const salesRevenue = ordersInRange.reduce(
+        //   (sum, order) => sum + order.totalAmount,
+        //   0
+        // );
 
-        const commissionFee = ordersInRange.reduce((sum, order) => {
-          const category = order.productDetails[0]?.productID?.information?.category;
-          const commissionRate = category ? category.commissionRate / 100 : 0;
-          return sum + (order.totalAmount * commissionRate);
-        }, 0);
-
-        const charges = salesRevenue - commissionFee;
-
+        const payouts = invoice.payout;
+        const salesRevenue = invoice.salesRevenue;
+        const charges = salesRevenue - payouts;
         // Calculate total orders and returned orders
         const totalOrders = ordersInRange.length;
         const returnedOrders = ordersInRange.filter(order => order.status === 'returned').length;
@@ -493,10 +485,8 @@ exports.getPaymentTracker = async (req, res) => {
           period: invoice,
           totalOrders,
           returned: returnedOrders,
-          salesRevenue,
           charges,
-          refundOnFees: 0,
-          payout: invoice.payout
+          refundOnFees: 0
         };
       })
     );

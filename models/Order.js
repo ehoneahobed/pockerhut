@@ -126,6 +126,7 @@ const OrderSchema = new Schema({
   },
   tax: {
     type: Number,
+    required: false
   },
   reason:{
     type: String,
