@@ -76,8 +76,6 @@ exports.createPaymentInvoice = async (order) => {
 exports.getAllPaymentInvoices = async (req, res) => {
   try {
     const { month, year } = req.query;
-
-    // Calculate the start and end dates for the filter
     const currentDate = new Date();
     const filterMonth = month ? parseInt(month) - 1 : currentDate.getMonth();
     const filterYear = year ? parseInt(year) : currentDate.getFullYear();
