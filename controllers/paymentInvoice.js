@@ -33,7 +33,7 @@ exports.createPaymentInvoice = async (order) => {
       // const deliveryFee = productDetail.totalPrice * (deliveryFeeRate / 100);
       const commission = productDetail.totalPrice * (commissionRate / 100);
 
-      let payout = orders.subtotal - (commission);
+      let payout = orders.subtotal - commission;
       payout = Math.floor(payout);
       const startDate = orders.orderDate;
       const dueDate = new Date(new Date().setDate(new Date().getDate() + 15));
@@ -90,19 +90,19 @@ exports.getAllPaymentInvoices = async (req, res) => {
 
     const invoices = await PaymentInvoice.find({
       startDate: { $lte: new Date() },
-      dueDate: { $gte: new Date() }
+      dueDate: { $gte: new Date() },
     })
       .populate({
         path: "vendor",
         model: "Vendor",
-        select: "-sellerAccountInformation.password" // Exclude the password field
+        select: "-sellerAccountInformation.password", // Exclude the password field
       })
       .populate({
         path: "order",
         populate: {
           path: "productDetails.productID",
-          model: "Product"
-        }
+          model: "Product",
+        },
       });
     // Enhance invoices with total orders and sales revenue for the range
     const enhancedInvoices = await Promise.all(
@@ -111,57 +111,57 @@ exports.getAllPaymentInvoices = async (req, res) => {
         const invoiceEndDate = invoice.dueDate;
 
         console.log(`Invoice vendor: ${invoice.vendor._id}`);
-        
+
         // Find orders within the date range
         const ordersInRange = await Order.find({
           vendor: invoice.vendor._id,
           orderDate: { $gte: invoiceStartDate, $lte: invoiceEndDate },
-          isPaid: true
+          isPaid: true,
         });
         const salesRevenue = ordersInRange.reduce(
           (sum, order) => sum + order.totalAmount,
           0
         );
-        const tax = ordersInRange.reduce(
-          (sum, order) => sum + order.tax,0
-        );
-        console.log('pay',invoice.payout);
-        console.log('tax',tax);
+        const tax = ordersInRange.reduce((sum, order) => sum + order.tax, 0);
         // Calculate total orders and sales revenue
         const totalOrders = ordersInRange.length;
         return {
           ...invoice._doc,
           totalOrders,
           salesRevenue,
-          charges: salesRevenue - (invoice.payout + tax)
+          charges: salesRevenue - (invoice.payout + tax),
         };
       })
     );
     return res.status(200).json({
       success: true,
       count: enhancedInvoices.length,
-      data: enhancedInvoices
+      data: enhancedInvoices,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: "Server Error"
+      error: "Server Error",
     });
   }
 };
 exports.getVendorPaymentInvoices = async (req, res) => {
   try {
-    const {vendorId} = req.params
+    const { vendorId } = req.params;
     const { month, year } = req.query;
 
     if (!vendorId) {
-      return res.status(400).json({ success: false, error: "Vendor ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Vendor ID is required" });
     }
     const vendor = await Vendor.findOne({
-      _id: vendorId
+      _id: vendorId,
     });
     if (!vendor) {
-      return res.status(404).json({ success: false, error: "Vendor not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Vendor not found" });
     }
 
     // Calculate the start and end dates for the filter
@@ -175,31 +175,31 @@ exports.getVendorPaymentInvoices = async (req, res) => {
     const invoices = await PaymentInvoice.find({
       vendor: vendorId,
       startDate: { $gte: startDate },
-      dueDate: { $lte: endDate }
+      dueDate: { $lte: endDate },
     })
       .populate({
         path: "vendor",
         model: "Vendor",
-        select: "-sellerAccountInformation.password" // Exclude the password field
+        select: "-sellerAccountInformation.password", // Exclude the password field
       })
       .populate({
         path: "order",
         populate: {
           path: "productDetails.productID",
-          model: "Product"
-        }
-      })
+          model: "Product",
+        },
+      });
     // Enhance invoices with total orders and sales revenue for the range
     const enhancedInvoices = await Promise.all(
       invoices.map(async (invoice) => {
         const invoiceStartDate = invoice.startDate;
         const invoiceEndDate = invoice.dueDate;
-        
+
         // Find orders within the date range
         const ordersInRange = await Order.find({
           vendor: invoice.vendor._id,
           orderDate: { $gte: invoiceStartDate, $lte: invoiceEndDate },
-          isPaid: true
+          isPaid: true,
         });
 
         const salesRevenue = ordersInRange.reduce(
@@ -212,7 +212,7 @@ exports.getVendorPaymentInvoices = async (req, res) => {
         return {
           ...invoice._doc,
           totalOrders,
-          salesRevenue
+          salesRevenue,
         };
       })
     );
@@ -220,12 +220,12 @@ exports.getVendorPaymentInvoices = async (req, res) => {
     return res.status(200).json({
       success: true,
       count: enhancedInvoices.length,
-      data: enhancedInvoices
+      data: enhancedInvoices,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: "Server Error"
+      error: "Server Error",
     });
   }
 };
@@ -234,21 +234,28 @@ exports.getVendorStatementTotals = async (req, res) => {
     const { vendorId } = req.params;
 
     if (!vendorId) {
-      return res.status(400).json({ success: false, error: "Vendor ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Vendor ID is required" });
     }
     const vendor = await Vendor.findOne({
-      _id: vendorId
+      _id: vendorId,
     });
     if (!vendor) {
-      return res.status(404).json({ success: false, error: "Vendor not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Vendor not found" });
     }
-
 
     const vendorObjectId = mongoose.Types.ObjectId(vendorId);
 
-    const earliestDueDateInvoice = await PaymentInvoice.findOne({ vendor: vendorObjectId });
+    const earliestDueDateInvoice = await PaymentInvoice.findOne({
+      vendor: vendorObjectId,
+    });
     if (!earliestDueDateInvoice) {
-      return res.status(404).json({ success: false, error: "No invoices found for the vendor" });
+      return res
+        .status(404)
+        .json({ success: false, error: "No invoices found for the vendor" });
     }
     const invoices = await PaymentInvoice.aggregate([
       { $match: { vendor: vendorObjectId } },
@@ -256,17 +263,17 @@ exports.getVendorStatementTotals = async (req, res) => {
         $group: {
           _id: {
             year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
+            month: { $month: "$createdAt" },
           },
           totalPaidAmount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "paid"] }, "$payout", 0]
-            }
+              $cond: [{ $eq: ["$status", "paid"] }, "$payout", 0],
+            },
           },
           totalUnpaidAmount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "unpaid"] }, "$payout", 0]
-            }
+              $cond: [{ $eq: ["$status", "unpaid"] }, "$payout", 0],
+            },
           },
           totalDueAmount: {
             $sum: {
@@ -274,23 +281,23 @@ exports.getVendorStatementTotals = async (req, res) => {
                 {
                   $and: [
                     { $eq: ["$status", "unpaid"] },
-                    { $lte: ["$dueDate", (earliestDueDateInvoice.dueDate)-1] }
-                  ]
+                    { $lte: ["$dueDate", earliestDueDateInvoice.dueDate - 1] },
+                  ],
                 },
                 "$payout",
-                0
-              ]
-            }
+                0,
+              ],
+            },
           },
           paidCount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "paid"] }, 1, 0]
-            }
+              $cond: [{ $eq: ["$status", "paid"] }, 1, 0],
+            },
           },
           unpaidCount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0]
-            }
+              $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0],
+            },
           },
           dueCount: {
             $sum: {
@@ -298,49 +305,52 @@ exports.getVendorStatementTotals = async (req, res) => {
                 {
                   $and: [
                     { $eq: ["$status", "unpaid"] },
-                    { $lte: ["$dueDate",  (earliestDueDateInvoice.dueDate)-1] }
-                  ]
+                    { $lte: ["$dueDate", earliestDueDateInvoice.dueDate - 1] },
+                  ],
                 },
                 1,
-                0
-              ]
-            }
+                0,
+              ],
+            },
           },
-          createdAt: { $first: "$createdAt" }
-        }
+          createdAt: { $first: "$createdAt" },
+        },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]);
     const openStatementInvoices = await PaymentInvoice.find({
       vendor: vendorObjectId,
       status: { $ne: "paid" },
-      dueDate: { $gte: new Date() }
+      dueDate: { $gte: new Date() },
     })
-    .populate({
-      path: "vendor",
-      model: "Vendor",
-      select: "-sellerAccountInformation.password" // Exclude the password field
-    })
-    .populate({
-      path: "order",
-      populate: {
-        path: "productDetails.productID",
-        model: "Product"
-      }
-    });
+      .populate({
+        path: "vendor",
+        model: "Vendor",
+        select: "-sellerAccountInformation.password", // Exclude the password field
+      })
+      .populate({
+        path: "order",
+        populate: {
+          path: "productDetails.productID",
+          model: "Product",
+        },
+      });
 
-    const openStatementAmount = openStatementInvoices.reduce((sum, invoice) => sum + invoice.salesRevenue, 0);
+    const openStatementAmount = openStatementInvoices.reduce(
+      (sum, invoice) => sum + invoice.salesRevenue,
+      0
+    );
 
-    const result = invoices.map(invoice => ({
+    const result = invoices.map((invoice) => ({
       totalPaid: {
         amount: invoice.totalPaidAmount || 0,
         count: invoice.paidCount || 0,
       },
       totalDueAndUnpaid: {
-        amount: invoice.totalDueAmount + invoice.totalUnpaidAmount|| 0,
+        amount: invoice.totalDueAmount + invoice.totalUnpaidAmount || 0,
         count: invoice.dueCount + invoice.unpaidCount || 0,
       },
-      createdAt: invoice.createdAt
+      createdAt: invoice.createdAt,
     }));
 
     return res.status(200).json({
@@ -348,12 +358,12 @@ exports.getVendorStatementTotals = async (req, res) => {
       data: result,
       openStatement: {
         amount: openStatementAmount,
-        invoices: openStatementInvoices
-      }
+        invoices: openStatementInvoices,
+      },
     });
   } catch (error) {
     console.error("Error fetching statement totals:", error);
-    res.status(500).json({ message:error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 exports.updateStatus = async (req, res) => {
@@ -395,12 +405,15 @@ exports.updateMultipleStatuses = async (req, res) => {
       });
     }
 
-    let existingInvoices = await PaymentInvoice.find({ _id: { $in: ids } }, "_id");
-    let existingOrderIds = existingInvoices.map((invoice) => invoice._id.toString());
-
-    let missingOrderIds = ids.filter(
-      (id) => !existingOrderIds.includes(id)
+    let existingInvoices = await PaymentInvoice.find(
+      { _id: { $in: ids } },
+      "_id"
     );
+    let existingOrderIds = existingInvoices.map((invoice) =>
+      invoice._id.toString()
+    );
+
+    let missingOrderIds = ids.filter((id) => !existingOrderIds.includes(id));
 
     if (missingOrderIds.length > 0) {
       return res.status(404).json({
@@ -439,19 +452,30 @@ exports.getPaymentTracker = async (req, res) => {
 
     const invoices = await PaymentInvoice.find({
       startDate: { $lte: new Date() },
-      dueDate: { $gte: new Date() }
+      dueDate: { $gte: new Date() },
     })
       .populate({
         path: "vendor",
         model: "Vendor",
-        select: "-sellerAccountInformation.password" // Exclude the password field
+        select: "-sellerAccountInformation.password",
       })
       .populate({
         path: "order",
-        populate: {
-          path: "productDetails.productID",
-          model: "Product"
-        }
+        match: { status: "completed" },
+        populate: [
+          {
+            path: "productDetails.productID",
+            model: "Product",
+            populate: {
+              path: "information.category",
+              model: "Category",
+            },
+          },
+          {
+            path: "billingInformation",
+            model: "Billing",
+          },
+        ],
       });
 
     // Enhance invoices with total orders, returned orders, and sales revenue for the range
@@ -464,7 +488,8 @@ exports.getPaymentTracker = async (req, res) => {
         const ordersInRange = await Order.find({
           vendor: invoice.vendor._id,
           orderDate: { $gte: invoiceStartDate, $lte: invoiceEndDate },
-          isPaid: true
+          status: "completed",
+          isPaid: true,
         });
 
         // const salesRevenue = ordersInRange.reduce(
@@ -477,7 +502,9 @@ exports.getPaymentTracker = async (req, res) => {
         const charges = salesRevenue - payouts;
         // Calculate total orders and returned orders
         const totalOrders = ordersInRange.length;
-        const returnedOrders = ordersInRange.filter(order => order.status === 'returned').length;
+        const returnedOrders = ordersInRange.filter(
+          (order) => order.status === "returned"
+        ).length;
 
         return {
           vendorName: invoice.vendor.vendorName,
@@ -486,7 +513,7 @@ exports.getPaymentTracker = async (req, res) => {
           totalOrders,
           returned: returnedOrders,
           charges,
-          refundOnFees: 0
+          refundOnFees: 0,
         };
       })
     );
@@ -494,18 +521,15 @@ exports.getPaymentTracker = async (req, res) => {
     return res.status(200).json({
       success: true,
       count: enhancedInvoices.length,
-      data: enhancedInvoices
+      data: enhancedInvoices,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: "Server Error"
+      error: "Server Error",
     });
   }
 };
-
-
-
 
 exports.getInvoiceTotals = async (req, res) => {
   try {
@@ -514,45 +538,45 @@ exports.getInvoiceTotals = async (req, res) => {
         $group: {
           _id: {
             year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
+            month: { $month: "$createdAt" },
           },
           totalPaidAmount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "paid"] }, "$payout", 0]
-            }
+              $cond: [{ $eq: ["$status", "paid"] }, "$payout", 0],
+            },
           },
           totalUnpaidAmount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "unpaid"] }, "$payout", 0]
-            }
+              $cond: [{ $eq: ["$status", "unpaid"] }, "$payout", 0],
+            },
           },
           totalDueAmount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "overdue"] }, "$payout", 0]
-            }
+              $cond: [{ $eq: ["$status", "overdue"] }, "$payout", 0],
+            },
           },
           paidCount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "paid"] }, 1, 0]
-            }
+              $cond: [{ $eq: ["$status", "paid"] }, 1, 0],
+            },
           },
           unpaidCount: {
-           $sum: {
-              $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0]
-            } 
+            $sum: {
+              $cond: [{ $eq: ["$status", "unpaid"] }, 1, 0],
+            },
           },
           dueCount: {
             $sum: {
-              $cond: [{ $eq: ["$status", "overdue"] }, 1, 0]
-            } 
+              $cond: [{ $eq: ["$status", "overdue"] }, 1, 0],
+            },
           },
-          createdAt: { $first: "$createdAt" }
-        }
+          createdAt: { $first: "$createdAt" },
+        },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]);
 
-    const result = totalInvoices.map(invoice => ({
+    const result = totalInvoices.map((invoice) => ({
       totalPaid: {
         amount: invoice.totalPaidAmount || 0,
         count: invoice.paidCount || 0,
@@ -566,10 +590,11 @@ exports.getInvoiceTotals = async (req, res) => {
         count: invoice.dueCount || 0,
       },
       totalInvoices: {
-        amount: (invoice.totalPaidAmount || 0) + (invoice.totalUnpaidAmount || 0),
+        amount:
+          (invoice.totalPaidAmount || 0) + (invoice.totalUnpaidAmount || 0),
         count: (invoice.paidCount || 0) + (invoice.unpaidCount || 0),
       },
-      createdAt: invoice.createdAt
+      createdAt: invoice.createdAt,
     }));
 
     res.status(200).json({ success: true, data: result });
@@ -583,27 +608,25 @@ const updateOverdueInvoices = async () => {
     const currentDate = new Date();
     const overdueInvoices = await PaymentInvoice.find({
       dueDate: { $lt: currentDate },
-      status: { $ne: 'overdue' }
+      status: { $ne: "overdue" },
     });
 
     for (let invoice of overdueInvoices) {
-      invoice.status = 'overdue';
+      invoice.status = "overdue";
       await invoice.save();
     }
 
-    console.log(`Updated ${overdueInvoices.length} invoices to overdue status.`);
+    console.log(
+      `Updated ${overdueInvoices.length} invoices to overdue status.`
+    );
   } catch (error) {
-    console.error('Error updating overdue invoices:', error);
+    console.error("Error updating overdue invoices:", error);
   }
 };
 
 // Schedule the update function to run periodically
-const schedule = require('node-schedule');
-schedule.scheduleJob('0 0 * * *', updateOverdueInvoices);// Runs every day at midnight
-
-
-
-
+const schedule = require("node-schedule");
+schedule.scheduleJob("0 0 * * *", updateOverdueInvoices); // Runs every day at midnight
 
 // Function to get the current week number
 const getCurrentWeek = () => {

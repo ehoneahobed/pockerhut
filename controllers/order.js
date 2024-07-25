@@ -2,6 +2,7 @@ const Order = require("../models/Order");
 const { Product } = require("../models/Product");
 const { Category } = require("../models/Categories");
 const mongoose = require("mongoose");
+const { createPaymentInvoice } = require("./paymentInvoice");
 
 // create new order
 // exports.createOrder = async (req, res) => {
@@ -131,6 +132,9 @@ exports.updateOrderStatus = async (req, res) => {
       }
       updateFields.reason = reason;
     }
+    if (status === "completed"){
+      await createPaymentInvoice(order);
+    }
 
     // Update the order
     order = await Order.findByIdAndUpdate(req.params.id, updateFields, {
@@ -148,7 +152,6 @@ exports.updateOrderStatus = async (req, res) => {
 exports.updateMultipleOrderStatuses = async (req, res) => {
   const { orderIds, status, reason } = req.body;
 
-  console.log(req.body);
 
   try {
     let existingOrders = await Order.find({ _id: { $in: orderIds } }, "_id");
@@ -171,7 +174,6 @@ exports.updateMultipleOrderStatuses = async (req, res) => {
     if (status === "canceled") {
       updateFields.reason = reason;
     }
-
     // Update orders
     let orders = await Order.updateMany(
       { _id: { $in: orderIds } },
@@ -182,6 +184,11 @@ exports.updateMultipleOrderStatuses = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "No orders found to update" });
+    }
+    for (let order of existingOrders) {
+      if (status === "completed") {
+        await createPaymentInvoice(order);
+      }
     }
 
     res

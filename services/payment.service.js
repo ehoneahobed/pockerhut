@@ -4,7 +4,6 @@ const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 const {Product} = require('../models/Product');
 const _ = require('lodash');
-const { createPaymentInvoice } = require('../controllers/paymentInvoice');
 
 const {initializePayment, verifyPayment, getBanks, getAccountDetails} = require('../utils/payment')(request);
 
@@ -21,7 +20,7 @@ class PaymentService{
                     order: form.order_id,
                     amount: form.amount
                     }
-                // form.callback_url= 'http://localhost:5000/api/pay/create';
+                //form.callback_url= 'http://localhost:5000/api/pay/create';
 
                 initializePayment(form, (error, body) => {
                 if(error){
@@ -149,7 +148,6 @@ class PaymentService{
                         // console.log(amount.toString())
 
                         const updatedOrder = await this.updateOrderStatus(order, true);
-                        await createPaymentInvoice(order);
                         // console.log("Updated order:", updatedOrder);
                         const newPayment = { reference, amount, email, full_name, status, order: updatedOrder._id };
                         const payment = await Payment.create(newPayment);
