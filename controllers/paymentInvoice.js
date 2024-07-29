@@ -62,6 +62,8 @@ exports.createPaymentInvoice = async (order) => {
           dueDate: dueDate,
           currentWeek: getCurrentWeek(),
           order: order,
+          charges: productDetail.totalPrice - payout,
+          refundOnFees: 0,
         });
 
         await newInvoice.save();
@@ -120,14 +122,13 @@ exports.getAllPaymentInvoices = async (req, res) => {
           (sum, order) => sum + order.totalAmount,
           0
         );
-        const tax = ordersInRange.reduce((sum, order) => sum + order.tax, 0);
         // Calculate total orders and sales revenue
         const totalOrders = ordersInRange.length;
         return {
           ...invoice._doc,
           totalOrders,
           salesRevenue,
-          charges: salesRevenue - (invoice.payout + tax),
+          charges: salesRevenue - (invoice.payout + invoice.refundOnFees || 0),
         };
       })
     );
@@ -246,15 +247,6 @@ exports.getVendorStatementTotals = async (req, res) => {
     }
 
     const vendorObjectId = mongoose.Types.ObjectId(vendorId);
-
-    const earliestDueDateInvoice = await PaymentInvoice.findOne({
-      vendor: vendorObjectId,
-    });
-    if (!earliestDueDateInvoice) {
-      return res
-        .status(404)
-        .json({ success: false, error: "No invoices found for the vendor" });
-    }
     const invoices = await PaymentInvoice.aggregate([
       { $match: { vendor: vendorObjectId } },
       {
@@ -275,16 +267,7 @@ exports.getVendorStatementTotals = async (req, res) => {
           },
           totalDueAmount: {
             $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$status", "unpaid"] },
-                    { $lte: ["$dueDate", earliestDueDateInvoice.dueDate - 1] },
-                  ],
-                },
-                "$payout",
-                0,
-              ],
+              $cond: [{ $eq: ["$status", "overdue"] }, "$payout", 0],
             },
           },
           paidCount: {
@@ -299,17 +282,8 @@ exports.getVendorStatementTotals = async (req, res) => {
           },
           dueCount: {
             $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$status", "unpaid"] },
-                    { $lte: ["$dueDate", earliestDueDateInvoice.dueDate - 1] },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
+              $cond: [{ $eq: ["$status", "overdue"] }, 1, 0],
+            }
           },
           createdAt: { $first: "$createdAt" },
         },
@@ -440,6 +414,50 @@ exports.updateMultipleStatuses = async (req, res) => {
     });
   }
 };
+exports.updateRefundOnFees = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { refundOnFees } = req.body;
+
+    // Validate the refundOnFees value
+    if (typeof refundOnFees !== 'number' || refundOnFees < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid refundOnFees value",
+      });
+    }
+
+    const invoice = await PaymentInvoice.findById(id);
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        error: "Invoice not found",
+      });
+    }
+    if (invoice.status !== "unpaid") {
+      return res.status(400).json({
+        success: false,
+        error: "Refund can only be applied to unpaid invoices",
+      });
+    }
+    invoice.refundOnFees = refundOnFees;
+    invoice.charges = invoice.salesRevenue - invoice.payout;
+    invoice.payout = invoice.payout - refundOnFees;
+    invoice.charges += refundOnFees;
+    const savedInvoice = await invoice.save();
+    return res.status(200).json({
+      success: true,
+      data: savedInvoice,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+
 
 exports.getPaymentTracker = async (req, res) => {
   try {
@@ -497,7 +515,8 @@ exports.getPaymentTracker = async (req, res) => {
 
         const payouts = invoice.payout;
         const salesRevenue = invoice.salesRevenue;
-        const charges = salesRevenue - payouts;
+        const refundOnFees = invoice.refundOnFees || 0;
+        const charges = salesRevenue - (payouts + refundOnFees);
         // Calculate total orders and returned orders
         const totalOrders = ordersInRange.length;
         const returnedOrders = ordersInRange.filter(
@@ -511,7 +530,6 @@ exports.getPaymentTracker = async (req, res) => {
           totalOrders,
           returned: returnedOrders,
           charges,
-          refundOnFees: 0,
         };
       })
     );
