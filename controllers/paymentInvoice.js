@@ -302,10 +302,20 @@ exports.getVendorStatementTotals = async (req, res) => {
       })
       .populate({
         path: "order",
-        populate: {
-          path: "productDetails.productID",
-          model: "Product",
-        },
+        populate: [
+          {
+            path: "productDetails.productID",
+            model: "Product",
+            populate: {
+              path: "information.category",
+              model: "Category",
+            },
+          },
+          {
+            path: "billingInformation",
+            model: "Billing",
+          },
+        ],
       });
 
     const openStatementAmount = openStatementInvoices.reduce(
@@ -441,9 +451,7 @@ exports.updateRefundOnFees = async (req, res) => {
       });
     }
     invoice.refundOnFees = refundOnFees;
-    invoice.charges = invoice.salesRevenue - invoice.payout;
-    invoice.payout = invoice.payout - refundOnFees;
-    invoice.charges += refundOnFees;
+    invoice.payout = invoice.payout + refundOnFees;
     const savedInvoice = await invoice.save();
     return res.status(200).json({
       success: true,

@@ -34,6 +34,14 @@ const paymentInvoiceSchema = new mongoose.Schema({
         type: Number,
         required: false
     },
+    refundOnFees:{
+        type: Number,
+        required: false
+    },
+    charges:{
+        type: Number,
+        required: false
+    },
     order: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',

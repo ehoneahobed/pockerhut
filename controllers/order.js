@@ -3,6 +3,12 @@ const { Product } = require("../models/Product");
 const { Category } = require("../models/Categories");
 const mongoose = require("mongoose");
 const { createPaymentInvoice } = require("./paymentInvoice");
+const {
+  generateOrderConfirmationEmail,
+  generateOrderCancellationEmail,
+  generateOrderDeliveredEmail,
+} = require("../utils/emailTemplates");
+const { sendEmail } = require("../services/email.service");
 
 // create new order
 // exports.createOrder = async (req, res) => {
@@ -58,8 +64,8 @@ exports.createOrder = async (req, res) => {
   // Calculate total commission and delivery fees using a for loop
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
-    const category = categories.find(
-      (cat) => cat._id.equals(product.information?.category)
+    const category = categories.find((cat) =>
+      cat._id.equals(product.information?.category)
     );
 
     if (category) {
@@ -107,11 +113,13 @@ exports.updateOrderStatus = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Order not found" });
     }
+
     if (order.isPaid === false) {
       return res
-        .status(404)
+        .status(400)
         .json({ success: false, message: "Order is not paid" });
     }
+
     // Validate the status change
     if (order.status === "cancelled" && status === "cancelled") {
       return res
@@ -122,7 +130,7 @@ exports.updateOrderStatus = async (req, res) => {
     // Create an update object
     let updateFields = { status };
 
-    // If the status is "canceled", ensure the reason is provided
+    // If the status is "cancelled", ensure the reason is provided
     if (status === "cancelled") {
       if (!reason) {
         return res.status(400).json({
@@ -130,17 +138,90 @@ exports.updateOrderStatus = async (req, res) => {
           message: "Reason is required when canceling an order",
         });
       }
+      const billing = await Order.findById(order._id).populate(
+        "billingInformation productDetails.productID"
+      );
+
+      const products = billing.productDetails.map((item) => ({
+        name: item.productID.information.productName,
+        image: item.productID.images[0],
+        quantity: item.quantity,
+        price: item.price,
+        productId: item.productID._id,
+      }));
+      const orderDetails = {
+        orderNumber: billing._id,
+        products,
+      };
+      const emailContent = generateOrderCancellationEmail(
+        orderDetails.orderNumber,
+        orderDetails.products,
+      );
+      await sendEmail({
+        to: billing.billingInformation.email,
+        subject: "Order Cancellation - Porkerhut",
+        html: emailContent,
+      });
       updateFields.reason = reason;
     }
-    if (status === "completed"){
-      await createPaymentInvoice(order);
-    }
 
-    // Update the order
+    // Update the order and check for status "readyToGo"
     order = await Order.findByIdAndUpdate(req.params.id, updateFields, {
       new: true,
       runValidators: true,
-    });
+    }).populate("productDetails.productID");
+
+    // Send email only if status is "readyToGo"
+    if (status === "readyToGo") {
+      const orderDetails = {
+        customerName: order.billingInformation.fullName,
+        orderNumber: order._id,
+        products: order.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        totalAmount: order.totalAmount,
+        shippingAddress: order.billingInformation.address,
+      };
+      const emailContent = generateOrderConfirmationEmail(orderDetails);
+
+      await sendEmail({
+        to: order.billingInformation.email,
+        subject: "Order Ready to Go - Porkerhut",
+        html: emailContent,
+      });
+    }
+
+    // Additional actions when status is "completed"
+    if (status === "completed") {
+        const products = order.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+        }));
+  
+        // Send order completion email
+        const emailContent = generateOrderDeliveredEmail(
+          order._id,
+          products,
+          order.billingInformation.fullName
+        );
+  
+        await sendEmail({
+          to: order.billingInformation.email,
+          subject: "Order Completed - Porkerhut",
+          html: emailContent,
+        });
+  
+        // Create payment invoice
+        await createPaymentInvoice(order);
+
+        order.deliveredDate = new Date.now();
+        await order.save();
+    }
 
     res.status(200).json({ success: true, order });
   } catch (error) {
@@ -152,9 +233,11 @@ exports.updateOrderStatus = async (req, res) => {
 exports.updateMultipleOrderStatuses = async (req, res) => {
   const { orderIds, status, reason } = req.body;
 
-
   try {
-    let existingOrders = await Order.find({ _id: { $in: orderIds } }, "_id");
+    let existingOrders = await Order.find(
+      { _id: { $in: orderIds } },
+      "_id billingInformation productDetails status"
+    ).populate("productDetails.productID");
     let existingOrderIds = existingOrders.map((order) => order._id.toString());
 
     // Find order IDs that do not exist
@@ -169,11 +252,10 @@ exports.updateMultipleOrderStatuses = async (req, res) => {
         missingOrderIds,
       });
     }
+
     // Prepare the update fields
     let updateFields = { status };
-    if (status === "canceled") {
-      updateFields.reason = reason;
-    }
+
     // Update orders
     let orders = await Order.updateMany(
       { _id: { $in: orderIds } },
@@ -185,15 +267,117 @@ exports.updateMultipleOrderStatuses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "No orders found to update" });
     }
+
     for (let order of existingOrders) {
       if (status === "completed") {
+        const billing = await Order.findById(order._id).populate(
+          "billingInformation productDetails.productID"
+        );
+        const products = billing.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+          productId: item.productID._id,
+        }));
+  
+        // Send order completion email
+        const emailContent = generateOrderDeliveredEmail(
+          order._id,
+          products,
+          billing.billingInformation.firstName + " " + billing.billingInformation.lastName,
+        );
+        await sendEmail({
+          to: billing.billingInformation.email,
+          subject: "Order Completed - Porkerhut",
+          html: emailContent,
+        });
+  
+        // Create payment invoice
         await createPaymentInvoice(order);
+      
+    }
+      if (status === "ready to go") {
+        const billing = await Order.findById(order._id).populate(
+          "billingInformation productDetails.productID"
+        );
+        console.log(`Billing: ${billing}`);
+        console.log(`Billing Information: ${billing.billingInformation}`);
+        console.log(`Product Details: ${billing.productDetails}`);
+
+        const products = billing.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+          productId: item.productID._id,
+        }));
+
+        const orderDetails = {
+          customerName:
+            billing.billingInformation.firstName +
+            " " +
+            billing.billingInformation.lastName,
+          orderNumber: billing._id,
+          products,
+          totalAmount: billing.totalAmount,
+          shippingAddress: billing.billingInformation,
+        };
+
+        const emailContent = generateOrderConfirmationEmail(
+          orderDetails.customerName,
+          orderDetails.orderNumber,
+          orderDetails.products,
+          orderDetails.totalAmount,
+          orderDetails.shippingAddress
+        );
+
+        await sendEmail({
+          to: billing.billingInformation.email,
+          subject: "Order Ready to Go - Porkerhut",
+          html: emailContent,
+        });
+      }
+      if (status === "cancelled") {
+        console.log(`Reason: ${reason}`);
+        console.log(`Order: ${order}`);
+        if (!reason) {
+          return res.status(400).json({
+            success: false,
+            message: "Reason is required when canceling an order",
+          });
+        }
+        const billing = await Order.findById(order._id).populate(
+          "billingInformation productDetails.productID"
+        );
+  
+        const products = billing.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+          productId: item.productID._id,
+        }));
+        const orderDetails = {
+          orderNumber: billing._id,
+          products,
+        };
+        const emailContent = generateOrderCancellationEmail(
+          orderDetails.orderNumber,
+          orderDetails.products,
+        );
+        await sendEmail({
+          to: billing.billingInformation.email,
+          subject: "Order Cancellation - Porkerhut",
+          html: emailContent,
+        });
+        updateFields.reason = reason;
       }
     }
 
     res
       .status(200)
-      .json({ success: true, message: "orders updated successfully" });
+      .json({ success: true, message: "Orders updated successfully" });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");

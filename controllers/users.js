@@ -3,6 +3,7 @@ const Billing = require("../models/Billing");
 const bcrypt = require("bcrypt");
 const emailService = require("../services/email.service");
 const crypto = require("crypto");
+const { resetEmail } = require("../utils/emailTemplates");
 
 // update user
 exports.updateUser = async (req, res) => {
@@ -184,17 +185,16 @@ exports.sendPasswordResetEmail = async (req, res) => {
     await user.save();
 
     const resetLink = `${process.env.FRONTEND_BASE_URL}/reset-password/${token}`;
+    const template = resetEmail(resetLink);
     const emailOptions = {
       to: user.email,
       subject: "Password Reset",
-      text: `To reset your password, click the following link: ${resetLink}`,
-      html: `<p>To reset your password, click the following link: <a href="${resetLink}">Reset Password</a></p>`,
-    };
-
-    // console.log({ emailOptions });
-
-    await emailService.sendEmailWithMailerSend(emailOptions);
-    // await emailService.sendEmail(emailOptions);
+     };
+    await emailService.sendEmail({
+      to: emailOptions.to,
+      subject: emailOptions.subject,
+      html: template,
+    });
     res.status(200).json({ message: "Password reset email sent." });
   } catch (error) {
     console.error(error);

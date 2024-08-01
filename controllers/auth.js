@@ -3,7 +3,9 @@ const User = require("../models/User");
 const Invitation = require("../models/AdminInvitation");
 const jwt = require('jsonwebtoken');
 const crypto = require("crypto");
-const { sendInvitationEmail } = require('../services/email.service');
+const { sendInvitationEmail, sendEmail } = require('../services/email.service');
+const { generateWelcomeEmail, generateNewWelcomeEmail } = require("../utils/emailTemplates");
+const { default: axios } = require("axios");
 
 exports.registerUser = async (req, res) => {
   try {
@@ -41,7 +43,7 @@ exports.registerUser = async (req, res) => {
     // hashing password with bcrypt
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-
+    
     const newUser = new User({
       firstName: firstName,
       lastName: lastName,
@@ -51,14 +53,45 @@ exports.registerUser = async (req, res) => {
       role: role,
       isAccessRevoked: isAccessRevoked,
     });
-
     const savedUser = await newUser.save();
+    const thankYouTemplate = generateWelcomeEmail(savedUser.firstName, savedUser.lastName, savedUser.email);
+    await sendEmail({
+      to: savedUser.email,
+      subject: "Welcome to the platform",
+      html: thankYouTemplate
+    })
     // send back everything except that the password
     // const data = { ...savedUser.toObject(), password: undefined };
+
+    let topProducts = [];
+    try {
+      const response = await axios.get(`${process.env.BASE_API_URL}/api/orders/admin/topProducts`);
+      topProducts = response.data.slice(0, 3);
+    } catch (error) {
+      console.error("Error fetching top products:", error);
+      topProducts = [];
+    }
+    
+    const productDetails = topProducts.map(product => ({
+      productName: product.productInfo.information.productName,
+      productId: product.productID,
+      totalItemsSold: product.totalItemsSold,
+      totalSales: product.totalSales,
+      productPrice: product.productInfo.pricing.productPrice,
+      image: product.productInfo?.images[0],
+    }));
+    const thankYou = generateNewWelcomeEmail(savedUser.firstName, productDetails);
+    await sendEmail({
+      to: savedUser.email,
+      subject: "Welcome to the platform",
+      html: thankYou
+    });    
+
     const { password: myPassword, ...others} = savedUser._doc;
     res.status(201).json({ message: "User created successfully", others });
   } catch (error) {
-    res.status(500).json({ error });
+    console.log(error);
+    res.status(500).json({ message: error.message });
   }
 };
 

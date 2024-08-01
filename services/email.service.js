@@ -3,20 +3,20 @@ const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
 const transporter = nodemailer.createTransport({
   // configure  email service here
-  host: process.env.EMAIL_AUTH_HOST,
-  port: process.env.EMAIL_AUTH_PORT,
+  host: 'smtp.gmail.com',
+  port: 587,
   auth: {
-    user: process.env.EMAIL_AUTH_USER,
-    pass: process.env.EMAIL_AUTH_PASS,
-  },
+    user: process.env.EMAIL_AUTH_USER || "nambajeeedwin@gmail.com",
+    pass: process.env.EMAIL_AUTH_PASS || "qqoqskezobqqwzfo",
+  },  
 });
 
-async function sendEmail({ to, subject, text }) {
+async function sendEmail({ to, subject, html }) {
   const mailOptions = {
     from: '"PorkerHut Service" <ehoneah@learninbits.com>',
     to,
     subject,
-    text,
+    html,
   };
 
   try {
