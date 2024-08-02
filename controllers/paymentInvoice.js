@@ -450,8 +450,12 @@ exports.updateRefundOnFees = async (req, res) => {
         error: "Refund can only be applied to unpaid invoices",
       });
     }
+    // Calculate the difference to be added to payout
+    const previousRefundOnFees = invoice.refundOnFees || 0;
+    const refundDifference = refundOnFees - previousRefundOnFees;
+    // Update refundOnFees and payout
     invoice.refundOnFees = refundOnFees;
-    invoice.payout = invoice.payout + refundOnFees;
+    invoice.payout += refundDifference;
     const savedInvoice = await invoice.save();
     return res.status(200).json({
       success: true,
