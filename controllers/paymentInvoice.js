@@ -417,7 +417,6 @@ exports.updateMultipleStatuses = async (req, res) => {
       data: updatedInvoices,
     });
   } catch (error) {
-    console.error("Error updating invoice statuses:", error);
     res.status(500).json({
       success: false,
       error: "Server Error",

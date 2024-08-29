@@ -1,13 +1,22 @@
 const { Category, Subcategory } = require("../models/Categories");
 const { CategoryQuestion } = require("../models/CategoryQuestion");
-const {Product} = require('../models/Product')
+const { Product } = require("../models/Product");
+const Vendor = require("../models/Vendor");
+const { sendEmail } = require("../services/email.service");
+const { commissionAndDeliveryRate, deleteCategory, disableCategory } = require("../utils/emailTemplates");
 
 // ************* CATEGORIES **********************************
 
 // Create a new category
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description, featuredImage, commissionRate, deliveryFeeRate } = req.body;
+    const {
+      name,
+      description,
+      featuredImage,
+      commissionRate,
+      deliveryFeeRate,
+    } = req.body;
     const existingcategory = await Category.findOne({ name });
 
     if (existingcategory) {
@@ -20,7 +29,7 @@ exports.createCategory = async (req, res) => {
       description,
       featuredImage,
       commissionRate,
-      deliveryFeeRate
+      deliveryFeeRate,
     });
 
     // Save the category to the database
@@ -36,13 +45,27 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    const { name, description, featuredImage, deliveryFeeRate, commissionRate } = req.body;
+    const {
+      name,
+      description,
+      featuredImage,
+      deliveryFeeRate,
+      commissionRate,
+    } = req.body;
+
     // Find the category by ID
     const category = await Category.findById(categoryId);
-
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
+
+    // Track if commissionRate or deliveryFeeRate have changed
+    const commissionRateChanged =
+      commissionRate !== undefined &&
+      commissionRate !== category.commissionRate;
+    const deliveryFeeRateChanged =
+      deliveryFeeRate !== undefined &&
+      deliveryFeeRate !== category.deliveryFeeRate;
 
     // Update the category properties
     if (name) {
@@ -54,18 +77,43 @@ exports.updateCategory = async (req, res) => {
     if (featuredImage) {
       category.featuredImage = featuredImage;
     }
-    if (deliveryFeeRate) {
-      category.deliveryFeeRate = deliveryFeeRate;
-    }
-    if (commissionRate) {
+    if (commissionRateChanged) {
       category.commissionRate = commissionRate;
+    }
+    if (deliveryFeeRateChanged) {
+      category.deliveryFeeRate = deliveryFeeRate;
     }
 
     // Save the updated category to the database
     const updatedCategory = await category.save();
 
-    res.status(200).json(updatedCategory);
+    // Send email if either commissionRate or deliveryFeeRate has changed
+    if (commissionRateChanged || deliveryFeeRateChanged) {
+      const products = await Product.find({
+        "information.category": categoryId,
+      });
+      const vendorIds = [...new Set(products.map((product) => product.vendor))];
+      const vendors = await Vendor.find({ _id: { $in: vendorIds } });
+
+      for (const vendor of vendors) {
+        const fullName = `${
+          vendor.sellerAccountInformation.firstName ||
+          vendor.businessInformation.businessOwnerName
+        } ${vendor.sellerAccountInformation.lastName || ""}`.trim();
+        await sendEmail({
+          to: vendor.sellerAccountInformation.email,
+          subject: "Updated Commission and Delivery Rates",
+          html: commissionAndDeliveryRate(
+            fullName,
+            commissionRate || category.commissionRate,
+            deliveryFeeRate || category.deliveryFeeRate
+          ),
+        });
+      }
+    }
+    return res.status(200).json(updatedCategory);
   } catch (error) {
+    console.log(error);
     res.status(500).json(error);
   }
 };
@@ -74,23 +122,43 @@ exports.updateCategory = async (req, res) => {
 exports.deleteCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    const category = await Category.findByIdAndDelete(categoryId);
+    const category = await Category.findById(categoryId);
 
     if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(404).json({ message: "Category not found" });
     }
-    await Product.deleteMany({ 'information.category': categoryId });
-    await Subcategory.deleteMany({ parent: categoryId });
-    await CategoryQuestion.deleteMany({ category: categoryId });
-    res
-      .status(200)
-      .json({
-        message: "Category and associated subcategories deleted successfully"
-      });
+
+    const products = await Product.find({ "information.category": categoryId });
+    if (products.length > 0) {
+      const vendorIds = [...new Set(products.map((product) => product.vendor))];
+      const vendors = await Vendor.find({ _id: { $in: vendorIds } });
+      await Product.deleteMany({ "information.category": categoryId });
+      await Subcategory.deleteMany({ parent: categoryId });
+      await CategoryQuestion.deleteMany({ category: categoryId });
+      await Category.findByIdAndDelete(categoryId);
+      for (const vendor of vendors) {
+        const fullName = `${
+          vendor.sellerAccountInformation.firstName ||
+          vendor.businessInformation.businessOwnerName
+        } ${vendor.sellerAccountInformation.lastName || ""}`.trim();
+
+        await sendEmail({
+          to: vendor.sellerAccountInformation.email,
+          subject: "Category Deletion Notification",
+          html: deleteCategory(fullName, category.name),
+        });
+      }
+    } else {
+      await Category.findByIdAndDelete(categoryId);
+    }
+    res.status(200).json({
+      message: "Category and associated subcategories deleted successfully",
+    });
   } catch (error) {
     res.status(500).json(error);
   }
 };
+
 // Get a single category
 exports.getCategory = async (req, res) => {
   try {
@@ -127,7 +195,7 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-exports.enableordisableCategory = async (req, res) => {
+exports.enableOrDisableCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
 
@@ -144,22 +212,39 @@ exports.enableordisableCategory = async (req, res) => {
     // Save the updated category to the database
     const updatedCategory = await category.save();
 
-    res
-      .status(200)
-      .json({ status: "Status updated successfully", data: updatedCategory });
+    // Find all products associated with this category
+    const products = await Product.find({ "information.category": categoryId });
+
+    // If there are any products associated with this category, send email
+    if (products.length > 0 && updatedCategory.isDisabled) {
+      const vendorIds = [...new Set(products.map((product) => product.vendor))];
+      const vendors = await Vendor.find({ _id: { $in: vendorIds } });
+      for (const vendor of vendors) {
+        const fullName = `${
+          vendor.sellerAccountInformation.firstName ||
+          vendor.businessInformation.businessOwnerName
+        } ${vendor.sellerAccountInformation.lastName || ""}`.trim();
+        await sendEmail({
+          to: vendor.sellerAccountInformation.email,
+          subject: "Category Update Notification",
+          html: disableCategory(fullName, category.name),
+        });
+      }
+    }
+    res.status(200).json({ status: "Status updated successfully", data: updatedCategory });
   } catch (error) {
     res.status(500).json(error);
   }
 };
 
 exports.createCategoryWithSubcategories = async (req, res) => {
-  const { name, description, featuredImage, subcategories } = req.body
+  const { name, description, featuredImage, subcategories } = req.body;
   try {
     // Step 1: Create the category first without subcategories
     const category = new Category({
       name,
       description,
-      featuredImage
+      featuredImage,
     });
 
     const savedCategory = await category.save();
@@ -192,11 +277,9 @@ exports.createCategoryWithSubcategories = async (req, res) => {
     res.status(201).json(savedCategory);
   } catch (error) {
     console.error("Error creating category with subcategories:", error);
-    res
-      .status(500)
-      .json({
-        message: "Failed to create category and subcategories",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to create category and subcategories",
+      error: error.message,
+    });
   }
 };

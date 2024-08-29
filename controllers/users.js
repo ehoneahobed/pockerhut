@@ -3,7 +3,8 @@ const Billing = require("../models/Billing");
 const bcrypt = require("bcrypt");
 const emailService = require("../services/email.service");
 const crypto = require("crypto");
-const { resetEmail } = require("../utils/emailTemplates");
+const { resetEmail, deactivateEmail, activateEmail } = require("../utils/emailTemplates");
+const { sendEmail } = require('../services/email.service');
 
 // update user
 exports.updateUser = async (req, res) => {
@@ -36,11 +37,30 @@ exports.updateStatus = async (req, res) => {
     }
     user.status = user.status === 'active' ? 'inactive' : 'active';
     const updatedUser = await user.save();
+    if (user.status === 'inactive') {
+      const fullName = `${user.firstName} ${user.lastName}`;
+      const deactivateEmails = deactivateEmail(fullName, new Date().toISOString().split('T')[0]);
+      await sendEmail({
+        to: user.email,
+        subject: "PorkerHut Account Deactivation",
+        html: deactivateEmails
+      })
+    }
+    if(user.status === 'active'){
+      const fullName = `${user.firstName} ${user.lastName}`;
+      const deactivateEmails = activateEmail(fullName);
+      await sendEmail({
+        to: user.email,
+        subject: "PorkerHut Account Activation",
+        html: deactivateEmails
+      })
+    }
     return res.status(200).json({
       message: "User status updated successfully",
       data: updatedUser
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json(error);
   }
 }

@@ -5,6 +5,8 @@ const saltRounds = 10;
 const jwt = require("jsonwebtoken");
 const crypto = require('crypto');
 const emailService = require("../services/email.service");
+const { sendEmail } = require('../services/email.service');
+const { vendorWelcomeEmail, vendorApproved, vendorRejected } = require("../utils/emailTemplates");
 
 // Create Vendor
 // exports.createVendor = async (req, res) => {
@@ -110,6 +112,14 @@ exports.createVendor = async (req, res) => {
      // Exclude the password from the returned payload
      const responseData = data.toObject();
      delete responseData.sellerAccountInformation.password;
+
+     const fullName  = `${data.sellerAccountInformation.firstName} ${data.sellerAccountInformation.lastName}`;
+
+     await sendEmail({
+      to: data.sellerAccountInformation.email,
+      subject: "Welcome to PorkerHut! Your Vendor Account is Now Active",
+      html: vendorWelcomeEmail(fullName)
+     })
 
     res.send(responseData);
   } catch (err) {
@@ -732,6 +742,22 @@ exports.updateVendorStatus = async (req, res) => {
       return res.status(404).send({
         message: "Vendor not found with id " + req.params.vendorId,
       });
+    }
+    if(req.body.storeStatus === 'approved') {
+      const fullName = `${vendor.sellerAccountInformation.firstName} ${vendor.sellerAccountInformation.lastName}`;
+      await sendEmail({
+        to: vendor.sellerAccountInformation.email,
+        subject: "Welcome to PorkerHut! Your Vendor Account is Now Active",
+        html: vendorApproved(fullName)
+      })
+    }
+    else if(req.body.storeStatus === 'rejected') {
+      const fullName = `${vendor.sellerAccountInformation.firstName} ${vendor.sellerAccountInformation.lastName}`;
+      await sendEmail({
+        to: vendor.sellerAccountInformation.email,
+        subject: "Your Vendor Account has been Rejected",
+        html: vendorRejected(fullName)
+      })
     }
     res.send(vendor);
   } catch (err) {

@@ -18,7 +18,7 @@ const {
   deleteSubcategory,
   getSubcategory,
   getSubcategories,
-  enableordisableCategory
+  enableOrDisableCategory
 } = require("../controllers/categories");
 
 // CATEGORIES
@@ -30,7 +30,7 @@ router.post("/", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary, cre
 router.patch("/:id", verifyTokenAndAdmin, uploadSingleImage, uploadToCloudinary,updateCategory);
 
 // enable or disable category
-router.put("/:id", verifyTokenAndAdmin, enableordisableCategory);
+router.put("/:id", verifyTokenAndAdmin, enableOrDisableCategory);
 
 // Delete a category
 router.delete("/:id", verifyTokenAndAdmin, deleteCategory);

@@ -959,7 +959,6 @@ exports.getAggregatedOrdersByAllUsers = async (req, res) => {
 
     res.json(aggregation);
   } catch (error) {
-    console.error("Error fetching aggregated order data for all users:", error);
     res.status(500).json({
       message:
         "Server error occurred while fetching aggregated data for all users.",
