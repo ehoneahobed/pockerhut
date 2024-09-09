@@ -3,17 +3,17 @@ const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
 const transporter = nodemailer.createTransport({
   // configure  email service here
-  host: 'smtp.gmail.com',
-  port: 587,
+  host: 'smtp.zoho.com',
+  port: 465, 
   auth: {
-    user: process.env.EMAIL_AUTH_USER || "nambajeeedwin@gmail.com",
-    pass: process.env.EMAIL_AUTH_PASS || "qqoqskezobqqwzfo",
+    user: process.env.EMAIL_AUTH_USER || "info@porkerhut.com",
+    pass: process.env.EMAIL_AUTH_PASS || "porkerHub@2023",
   },  
 });
 
 async function sendEmail({ to, subject, html }) {
   const mailOptions = {
-    from: '"PorkerHut Service" <ehoneah@learninbits.com>',
+    from: '"PorkerHut Service" <info@porkerhut.com>',
     to,
     subject,
     html,
