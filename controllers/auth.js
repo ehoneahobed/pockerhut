@@ -67,6 +67,13 @@ exports.registerUser = async (req, res) => {
     try {
       const response = await axios.get(`${process.env.BASE_API_URL}/api/orders/admin/topProducts`);
       topProducts = response.data.slice(0, 3);
+      console.log('topProducts', topProducts);
+      console.log('topProducts.length', topProducts.length);
+      if (topProducts.length  === 0) {
+        const randomResponse = await axios.get(`${process.env.BASE_API_URL}/api/products`);
+        topProducts = randomResponse.data.slice(0, 3);
+      }
+      console.log('topProducts2', topProducts);
     } catch (error) {
       console.error("Error fetching top products:", error);
       topProducts = [];
