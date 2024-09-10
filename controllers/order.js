@@ -1,6 +1,14 @@
 const Order = require("../models/Order");
-const Product = require("../models/Product");
+const { Product } = require("../models/Product");
+const { Category } = require("../models/Categories");
 const mongoose = require("mongoose");
+const { createPaymentInvoice } = require("./paymentInvoice");
+const {
+  generateOrderConfirmationEmail,
+  generateOrderCancellationEmail,
+  generateOrderDeliveredEmail,
+} = require("../utils/emailTemplates");
+const { sendEmail } = require("../services/email.service");
 
 // create new order
 // exports.createOrder = async (req, res) => {
@@ -30,7 +38,6 @@ exports.createOrder = async (req, res) => {
     productDetails,
     subtotal,
     deliveryFee,
-    tax,
     totalAmount,
     billingInformation,
     orderNotes,
@@ -40,6 +47,36 @@ exports.createOrder = async (req, res) => {
   if (!productDetails || productDetails.length === 0) {
     return res.status(400).send({ message: "Product details are required" });
   }
+
+  const productIds = productDetails.map((pd) => pd.productID);
+  const products = await Product.find({ _id: { $in: productIds } });
+  const categoryIds = products.map((product) => product.information?.category);
+
+  if (categoryIds.length === 0 || categoryIds.includes(undefined)) {
+    return res.status(400).send({ message: "Product category is required" });
+  }
+
+  const categories = await Category.find({ _id: { $in: categoryIds } });
+
+  let totalCommission = 0;
+  // let totalDeliveryFee = 0;
+
+  // Calculate total commission and delivery fees using a for loop
+  for (let i = 0; i < products.length; i++) {
+    const product = products[i];
+    const category = categories.find((cat) =>
+      cat._id.equals(product.information?.category)
+    );
+
+    if (category) {
+      const commissionRate = category.commissionRate || 0;
+      totalCommission += (commissionRate / 100) * subtotal;
+      // const deliveryFeeRate = category.deliveryFeeRate || 0;
+      // totalDeliveryFee += (deliveryFeeRate / 100) * subtotal;
+    }
+  }
+
+  console.log(`Total Commission: ${totalCommission}`);
 
   try {
     let order = new Order({
@@ -53,8 +90,7 @@ exports.createOrder = async (req, res) => {
       })),
       subtotal,
       deliveryFee,
-      tax,
-      totalAmount,
+      totalAmount: totalAmount + Math.floor(totalCommission),
       billingInformation,
     });
 
@@ -66,21 +102,282 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// update the orderStatus of a given order
 exports.updateOrderStatus = async (req, res) => {
-  const { status } = req.body;
+  const { status, reason } = req.body;
   try {
-    let order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    // Check if the order exists
+    let order = await Order.findById(req.params.id);
+
     if (!order) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found" });
     }
+
+    if (order.isPaid === false) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order is not paid" });
+    }
+
+    // Validate the status change
+    if (order.status === "cancelled" && status === "cancelled") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order is already cancelled" });
+    }
+
+    // Create an update object
+    let updateFields = { status };
+
+    // If the status is "cancelled", ensure the reason is provided
+    if (status === "cancelled") {
+      if (!reason) {
+        return res.status(400).json({
+          success: false,
+          message: "Reason is required when canceling an order",
+        });
+      }
+      const billing = await Order.findById(order._id).populate(
+        "billingInformation productDetails.productID"
+      );
+
+      const products = billing.productDetails.map((item) => ({
+        name: item.productID.information.productName,
+        image: item.productID.images[0],
+        quantity: item.quantity,
+        price: item.price,
+        productId: item.productID._id,
+      }));
+      const orderDetails = {
+        orderNumber: billing._id,
+        products,
+      };
+      const emailContent = generateOrderCancellationEmail(
+        orderDetails.orderNumber,
+        orderDetails.products,
+      );
+      await sendEmail({
+        to: billing.billingInformation.email,
+        subject: "Order Cancellation - Porkerhut",
+        html: emailContent,
+      });
+      updateFields.reason = reason;
+    }
+
+    // Update the order and check for status "readyToGo"
+    order = await Order.findByIdAndUpdate(req.params.id, updateFields, {
+      new: true,
+      runValidators: true,
+    }).populate("productDetails.productID");
+
+    // Send email only if status is "readyToGo"
+    if (status === "readyToGo") {
+      const orderDetails = {
+        customerName: order.billingInformation.fullName,
+        orderNumber: order._id,
+        products: order.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        totalAmount: order.totalAmount,
+        shippingAddress: order.billingInformation.address,
+      };
+      const emailContent = generateOrderConfirmationEmail(orderDetails);
+
+      await sendEmail({
+        to: order.billingInformation.email,
+        subject: "Order Ready to Go - Porkerhut",
+        html: emailContent,
+      });
+    }
+
+    // Additional actions when status is "completed"
+    if (status === "completed") {
+        const products = order.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+        }));
+  
+        // Send order completion email
+        const emailContent = generateOrderDeliveredEmail(
+          order._id,
+          products,
+          order.billingInformation.fullName
+        );
+  
+        await sendEmail({
+          to: order.billingInformation.email,
+          subject: "Order Completed - Porkerhut",
+          html: emailContent,
+        });
+  
+        // Create payment invoice
+        await createPaymentInvoice(order);
+
+        order.deliveredDate = new Date.now();
+        await order.save();
+    }
+
     res.status(200).json({ success: true, order });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+exports.updateMultipleOrderStatuses = async (req, res) => {
+  const { orderIds, status, reason } = req.body;
+
+  try {
+    let existingOrders = await Order.find(
+      { _id: { $in: orderIds } },
+      "_id billingInformation productDetails status"
+    ).populate("productDetails.productID");
+    let existingOrderIds = existingOrders.map((order) => order._id.toString());
+
+    // Find order IDs that do not exist
+    let missingOrderIds = orderIds.filter(
+      (id) => !existingOrderIds.includes(id)
+    );
+
+    if (missingOrderIds.length > 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Some orders not found",
+        missingOrderIds,
+      });
+    }
+
+    // Prepare the update fields
+    let updateFields = { status };
+
+    // Update orders
+    let orders = await Order.updateMany(
+      { _id: { $in: orderIds } },
+      { $set: updateFields }
+    );
+
+    if (orders.nModified === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No orders found to update" });
+    }
+
+    for (let order of existingOrders) {
+      if (status === "completed") {
+        const billing = await Order.findById(order._id).populate(
+          "billingInformation productDetails.productID"
+        );
+        const products = billing.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+          productId: item.productID._id,
+        }));
+  
+        // Send order completion email
+        const emailContent = generateOrderDeliveredEmail(
+          order._id,
+          products,
+          billing.billingInformation.firstName + " " + billing.billingInformation.lastName,
+        );
+        await sendEmail({
+          to: billing.billingInformation.email,
+          subject: "Order Completed - Porkerhut",
+          html: emailContent,
+        });
+  
+        // Create payment invoice
+        await createPaymentInvoice(order);
+      
+    }
+      if (status === "ready to go") {
+        const billing = await Order.findById(order._id).populate(
+          "billingInformation productDetails.productID"
+        );
+        console.log(`Billing: ${billing}`);
+        console.log(`Billing Information: ${billing.billingInformation}`);
+        console.log(`Product Details: ${billing.productDetails}`);
+
+        const products = billing.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+          productId: item.productID._id,
+        }));
+
+        const orderDetails = {
+          customerName:
+            billing.billingInformation.firstName +
+            " " +
+            billing.billingInformation.lastName,
+          orderNumber: billing._id,
+          products,
+          totalAmount: billing.totalAmount,
+          shippingAddress: billing.billingInformation,
+        };
+
+        const emailContent = generateOrderConfirmationEmail(
+          orderDetails.customerName,
+          orderDetails.orderNumber,
+          orderDetails.products,
+          orderDetails.totalAmount,
+          orderDetails.shippingAddress
+        );
+
+        await sendEmail({
+          to: billing.billingInformation.email,
+          subject: "Order Ready to Go - Porkerhut",
+          html: emailContent,
+        });
+      }
+      if (status === "cancelled") {
+        console.log(`Reason: ${reason}`);
+        console.log(`Order: ${order}`);
+        if (!reason) {
+          return res.status(400).json({
+            success: false,
+            message: "Reason is required when canceling an order",
+          });
+        }
+        const billing = await Order.findById(order._id).populate(
+          "billingInformation productDetails.productID"
+        );
+  
+        const products = billing.productDetails.map((item) => ({
+          name: item.productID.information.productName,
+          image: item.productID.images[0],
+          quantity: item.quantity,
+          price: item.price,
+          productId: item.productID._id,
+        }));
+        const orderDetails = {
+          orderNumber: billing._id,
+          products,
+        };
+        const emailContent = generateOrderCancellationEmail(
+          orderDetails.orderNumber,
+          orderDetails.products,
+        );
+        await sendEmail({
+          to: billing.billingInformation.email,
+          subject: "Order Cancellation - Porkerhut",
+          html: emailContent,
+        });
+        updateFields.reason = reason;
+      }
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Orders updated successfully" });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");
@@ -479,11 +776,9 @@ exports.getProductsByVendorInOrder = async (req, res) => {
     );
 
     if (filteredProductDetails.length === 0) {
-      return res
-        .status(404)
-        .send({
-          message: "No products found for the given vendor in this order",
-        });
+      return res.status(404).send({
+        message: "No products found for the given vendor in this order",
+      });
     }
 
     return res.status(200).send({ products: filteredProductDetails });
@@ -586,92 +881,90 @@ exports.getAggregatedOrdersByUser = async (req, res) => {
     res.json(aggregation[0]);
   } catch (error) {
     console.error("Error fetching aggregated order data:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching aggregated order data.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching aggregated order data.",
+    });
   }
 };
 
 // Get aggregated order data for all users
 exports.getAggregatedOrdersByAllUsers = async (req, res) => {
-    try {
-      const aggregation = await Order.aggregate([
-        {
-          $group: {
-            _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
-            count: { $sum: 1 },
-            totalAmount: { $sum: "$totalAmount" },
-          }
+  try {
+    const aggregation = await Order.aggregate([
+      {
+        $group: {
+          _id: { customer: "$customer", status: "$status", isPaid: "$isPaid" },
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$totalAmount" },
         },
-        {
-          $group: {
-            _id: "$_id.customer",
-            totalOrders: { $sum: "$count" },
-            ordersByStatus: {
-              $push: {
-                status: "$_id.status",
-                count: "$count",
-                isPaid: "$_id.isPaid",
-              }
+      },
+      {
+        $group: {
+          _id: "$_id.customer",
+          totalOrders: { $sum: "$count" },
+          ordersByStatus: {
+            $push: {
+              status: "$_id.status",
+              count: "$count",
+              isPaid: "$_id.isPaid",
             },
-            totalAmountSpent: {
-              $sum: {
-                $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0]
-              }
+          },
+          totalAmountSpent: {
+            $sum: {
+              $cond: [{ $eq: ["$_id.isPaid", true] }, "$totalAmount", 0],
             },
-            totalPaidOrders: {
-              $sum: {
-                $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0]
-              }
-            }
-          }
+          },
+          totalPaidOrders: {
+            $sum: {
+              $cond: [{ $eq: ["$_id.isPaid", true] }, "$count", 0],
+            },
+          },
         },
-        {
-          $lookup: {
-            from: "users",
-            localField: "_id",
-            foreignField: "_id",
-            as: "userData"
-          }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userData",
         },
-        { $unwind: "$userData" },
-        {
-          $project: {
-            totalOrders: 1,
-            ordersByStatus: 1,
-            totalAmountSpent: 1,
-            totalPaidOrders: 1,
-            userData: {
-              _id:1,
-              firstName: 1,
-              lastName: 1,
-              status: 1,
-              lastLogin: 1,
-              phoneNumber:1,
-              email: 1,
-              createdAt: 1,
-              updatedAt: 1,
-              role: 1,
-              isAccessRevoked: 1 // Include isAccessRevoked field
-            }
-          }
-        }
-      ]);
-  
-      if (aggregation.length === 0) {
-        return res.status(404).json({ message: "No aggregated data found." });
-      }
-  
-      res.json(aggregation);
-    } catch (error) {
-      console.error("Error fetching aggregated order data for all users:", error);
-      res.status(500).json({ message: "Server error occurred while fetching aggregated data for all users." });
-    }
-  };
-  
+      },
+      { $unwind: "$userData" },
+      {
+        $project: {
+          totalOrders: 1,
+          ordersByStatus: 1,
+          totalAmountSpent: 1,
+          totalPaidOrders: 1,
+          userData: {
+            _id: 1,
+            firstName: 1,
+            lastName: 1,
+            status: 1,
+            lastLogin: 1,
+            phoneNumber: 1,
+            email: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            role: 1,
+            isAccessRevoked: 1, // Include isAccessRevoked field
+          },
+        },
+      },
+    ]);
 
+    if (aggregation.length === 0) {
+      return res.status(404).json({ message: "No aggregated data found." });
+    }
+
+    res.json(aggregation);
+  } catch (error) {
+    res.status(500).json({
+      message:
+        "Server error occurred while fetching aggregated data for all users.",
+    });
+  }
+};
 
 // agggregated order data for a single vendor
 exports.getAggregatedDataForVendor = async (req, res) => {
@@ -740,22 +1033,18 @@ exports.getAggregatedDataForVendor = async (req, res) => {
     ]);
 
     if (aggregation.length === 0) {
-      return res
-        .status(404)
-        .json({
-          message: "No aggregated data found for the specified vendor.",
-        });
+      return res.status(404).json({
+        message: "No aggregated data found for the specified vendor.",
+      });
     }
 
     res.json(aggregation[0]); // Assuming there's at least one document returned
   } catch (error) {
     console.error("Error fetching aggregated data for vendor:", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "Server error occurred while fetching aggregated data for vendor.",
-      });
+    res.status(500).json({
+      message:
+        "Server error occurred while fetching aggregated data for vendor.",
+    });
   }
 };
 
@@ -829,12 +1118,10 @@ exports.getAggregatedDataForAllVendors = async (req, res) => {
     res.json(aggregation); // Return data for all vendors
   } catch (error) {
     console.error("Error fetching aggregated data for all vendors:", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "Server error occurred while fetching aggregated data for all vendors.",
-      });
+    res.status(500).json({
+      message:
+        "Server error occurred while fetching aggregated data for all vendors.",
+    });
   }
 };
 
@@ -914,11 +1201,9 @@ exports.getAdminOverview = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching admin overview data:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching admin overview data.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching admin overview data.",
+    });
   }
 };
 
@@ -928,7 +1213,8 @@ exports.getAllAdminOverview = async (req, res) => {
 
   // Set default values for startDate and endDate if not provided
   endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
-  startDate = startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
 
   // Calculate the difference in days for averaging
   const diffInTime =
@@ -936,76 +1222,91 @@ exports.getAllAdminOverview = async (req, res) => {
   const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
 
   try {
-  const matchStage = {
-    $match: {
-      orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
-    },
-  };
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true,
+      },
+    };
 
-  const groupStage = {
-    $group: {
-      _id: {
-        year: { $year: "$orderDate" },
-        month: { $month: "$orderDate" }
-    },
-    overViewDate: { $first: "$orderDate" },
-      totalSales: { $sum: "$totalAmount" },
-      totalItemsSold: { $sum: { $size: "$productDetails" } },
-      averageOrderValue: { $avg: "$totalAmount" },
-      totalOrders: { $sum: 1 },
-      totalPendingOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+    const groupStage = {
+      $group: {
+        _id: {
+          year: { $year: "$orderDate" },
+          month: { $month: "$orderDate" },
+        },
+        overViewDate: { $first: "$orderDate" },
+        totalSales: { $sum: "$totalAmount" },
+        totalItemsSold: { $sum: { $size: "$productDetails" } },
+        averageOrderValue: { $avg: "$totalAmount" },
+        totalOrders: { $sum: 1 },
+        totalPendingOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+        },
+        totalFulfilledOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+        },
+        totalFailedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
+        },
+        totalReadyToGoOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
+        },
+        totalCompletedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+        },
+        totalReturnedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
+        },
+        productDetails: { $push: "$productDetails" },
       },
-      totalFulfilledOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+    };
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+    const lookupStage = {
+      $lookup: {
+        from: "products", // replace with your actual Product collection name
+        localField: "productDetails.productID",
+        foreignField: "_id",
+        as: "productDetails.productInfo",
       },
-      totalFailedOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
-      },
-      totalReadyToGoOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
-      },
-      totalCompletedOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
-      },
-      totalReturnedOrders: {
-        $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
-      },
-    },
-  };
+    };
 
-  const sortStage = {
-    $sort: {
-        overViewDate: -1 // Use 1 for ascending order or -1 for descending order
-    }
-};
+    const sortStage = {
+      $sort: {
+        overViewDate: -1, // Use 1 for ascending order or -1 for descending order
+      },
+    };
 
-  const projectStage = {
-    $project: {
-      _id: 0,
-      totalSales: 1,
-      totalItemsSold: 1,
-      averageOrderValue: 1,
-      totalOrders: 1,
-      averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
-      averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
-      totalPendingOrders: 1,
-      totalFulfilledOrders: 1,
-      totalFailedOrders: 1,
-      totalReadyToGoOrders: 1,
-      totalCompletedOrders: 1,
-      totalReturnedOrders: 1,
-      overViewDate: {
-        $dateToString: { format: "%Y-%m", date: "$overViewDate" } // Formatting to Year-Month
-    },
-    },
-  };
+    const projectStage = {
+      $project: {
+        _id: 0,
+        totalSales: 1,
+        totalItemsSold: 1,
+        averageOrderValue: 1,
+        totalOrders: 1,
+        averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
+        averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
+        totalPendingOrders: 1,
+        totalFulfilledOrders: 1,
+        totalFailedOrders: 1,
+        totalReadyToGoOrders: 1,
+        totalCompletedOrders: 1,
+        totalReturnedOrders: 1,
+        productDetails: 1,
+        overViewDate: {
+          $dateToString: { format: "%Y-%m", date: "$overViewDate" }, // Formatting to Year-Month
+        },
+      },
+    };
 
-  
     const ordersOverview = await Order.aggregate([
       matchStage,
       groupStage,
       sortStage,
+      unwindStage,
+      lookupStage,
       projectStage,
     ]);
 
@@ -1020,13 +1321,279 @@ exports.getAllAdminOverview = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching admin overview data:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching admin overview data.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching admin overview data.",
+    });
   }
+};
+// Adjust the path as necessary
 
+exports.getTopProducts = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+  try {
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true,
+      },
+    };
+
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+
+    const groupStage = {
+      $group: {
+        _id: "$productDetails.productID",
+        totalItemsSold: { $sum: "$productDetails.quantity" },
+        totalSales: {
+          $sum: {
+            $multiply: ["$productDetails.quantity", "$productDetails.price"],
+          },
+        }, // Calculate total sales
+        productInfo: { $first: "$productDetails" },
+      },
+    };
+
+    const sortStage = {
+      $sort: { totalItemsSold: -1 },
+    };
+
+    const lookupStage = {
+      $lookup: {
+        from: "products", // replace with your actual Product collection name
+        localField: "_id",
+        foreignField: "_id",
+        as: "productInfo",
+      },
+    };
+
+    const projectStage = {
+      $project: {
+        _id: 0,
+        productID: "$_id",
+        totalItemsSold: 1,
+        totalSales: 1,
+        productInfo: { $arrayElemAt: ["$productInfo", 0] },
+      },
+    };
+
+    const topProducts = await Order.aggregate([
+      matchStage,
+      unwindStage,
+      groupStage,
+      sortStage,
+      lookupStage,
+      projectStage,
+    ]);
+
+    if (topProducts.length > 0) {
+      res.json(topProducts);
+    } else {
+      res
+        .status(404)
+        .json({ message: "No products found in the given date range." });
+    }
+  } catch (error) {
+    console.error("Error fetching top products:", error);
+    res.status(500).json({
+      message: "Server error occurred while fetching top products.",
+    });
+  }
+};
+
+exports.getProductAnalytics = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+  // Calculate the difference in days for averaging
+  const diffInTime =
+    new Date(endDate).getTime() - new Date(startDate).getTime();
+  const diffInDays = diffInTime / (1000 * 3600 * 24) + 1; // +1 to include end date
+
+  try {
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true,
+      },
+    };
+
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+
+    const groupStage = {
+      $group: {
+        _id: "$productDetails.productID",
+        totalSales: { $sum: "$productDetails.totalPrice" },
+        totalItemsSold: { $sum: "$productDetails.quantity" },
+        averageOrderValue: { $avg: "$productDetails.totalPrice" },
+        totalOrders: { $sum: 1 },
+        totalPendingOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+        },
+        totalFulfilledOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "fulfilled"] }, 1, 0] },
+        },
+        totalFailedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "failed"] }, 1, 0] },
+        },
+        totalReadyToGoOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "readyToGo"] }, 1, 0] },
+        },
+        totalCompletedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+        },
+        totalReturnedOrders: {
+          $sum: { $cond: [{ $eq: ["$status", "returned"] }, 1, 0] },
+        },
+        productDetails: { $first: "$productDetails" },
+      },
+    };
+
+    const lookupStage = {
+      $lookup: {
+        from: "products", // replace with your actual Product collection name
+        localField: "_id",
+        foreignField: "_id",
+        as: "productInfo",
+      },
+    };
+
+    const sortStage = {
+      $sort: {
+        totalSales: -1, // Sorting by total sales in descending order
+      },
+    };
+
+    const projectStage = {
+      $project: {
+        _id: 0,
+        productID: "$_id",
+        productInfo: { $arrayElemAt: ["$productInfo", 0] }, // Unwrap the product info
+        totalSales: 1,
+        totalItemsSold: 1,
+        averageOrderValue: 1,
+        totalOrders: 1,
+        averageDailyRevenues: { $divide: ["$totalSales", diffInDays] },
+        averageDailyOrders: { $divide: ["$totalOrders", diffInDays] },
+        totalPendingOrders: 1,
+        totalFulfilledOrders: 1,
+        totalFailedOrders: 1,
+        totalReadyToGoOrders: 1,
+        totalCompletedOrders: 1,
+        totalReturnedOrders: 1,
+      },
+    };
+
+    const productAnalytics = await Order.aggregate([
+      matchStage,
+      unwindStage,
+      groupStage,
+      lookupStage,
+      sortStage,
+      projectStage,
+    ]);
+
+    if (productAnalytics.length > 0) {
+      res.json(productAnalytics);
+    } else {
+      res.status(404).json({
+        message: "No product sales data found in the given date range.",
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching product analytics data:", error);
+    res.status(500).json({
+      message: "Server error occurred while fetching product analytics data.",
+    });
+  }
+};
+
+exports.getTopProductsBySales = async (req, res) => {
+  let { startDate, endDate } = req.query;
+
+  // Set default values for startDate and endDate if not provided
+  endDate = endDate || new Date(); // Defaults to the current date if endDate is not provided
+  startDate =
+    startDate || new Date(new Date().setFullYear(new Date().getFullYear() - 1)); // Defaults to 365 days before the current date
+
+  try {
+    const matchStage = {
+      $match: {
+        orderDate: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        isPaid: true,
+      },
+    };
+
+    const unwindStage = {
+      $unwind: "$productDetails",
+    };
+
+    const groupStage = {
+      $group: {
+        _id: "$productDetails.productID",
+        totalQuantity: { $sum: "$productDetails.quantity" },
+        totalSales: { $sum: "$productDetails.totalPrice" },
+      },
+    };
+
+    const sortStage = {
+      $sort: { totalSales: -1 }, // Sort by total sales in descending order
+    };
+
+    const lookupStage = {
+      $lookup: {
+        from: "products",
+        localField: "_id",
+        foreignField: "_id",
+        as: "productDetails",
+      },
+    };
+
+    const projectStage = {
+      $project: {
+        _id: 0,
+        productID: "$_id",
+        totalQuantity: 1,
+        totalSales: 1,
+        productDetails: { $arrayElemAt: ["$productDetails", 0] }, // Get the first (and only) product detail
+      },
+    };
+
+    const topProducts = await Order.aggregate([
+      matchStage,
+      unwindStage,
+      groupStage,
+      sortStage,
+      lookupStage,
+      projectStage,
+    ]);
+
+    if (topProducts.length > 0) {
+      res.json(topProducts);
+    } else {
+      res
+        .status(404)
+        .json({ message: "No products found in the given date range." });
+    }
+  } catch (error) {
+    console.error("Error fetching top products by sales:", error);
+    res.status(500).json({
+      message: "Server error occurred while fetching top products by sales.",
+    });
+  }
 };
 
 exports.getWeeklySalesOverview = async (req, res) => {
@@ -1116,10 +1683,8 @@ exports.getWeeklySalesOverview = async (req, res) => {
     res.json({ weeklySalesOverview: response });
   } catch (error) {
     console.error("Error fetching weekly sales overview:", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error occurred while fetching weekly sales overview.",
-      });
+    res.status(500).json({
+      message: "Server error occurred while fetching weekly sales overview.",
+    });
   }
 };

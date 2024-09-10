@@ -96,9 +96,6 @@ const ProductDetailSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "Vendor",
   },
-  deliveryFeePerProduct: {
-    type: Number
-  },
   deliveryOption: {
     type: String,
     enum: ["pickup", "delivery"],
@@ -129,6 +126,11 @@ const OrderSchema = new Schema({
   },
   tax: {
     type: Number,
+    required: false
+  },
+  reason:{
+    type: String,
+    required: false
   },
   totalAmount: {
     type: Number,
@@ -140,13 +142,13 @@ const OrderSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "readyToGo", "failed", "completed"],
+    enum: ["pending", "readyToGo", "failed", "completed", "cancelled"],
     default: "pending",
   },
   isPaid: {
     type: Boolean,
     default: false
-  }
+  },
 });
 
 const Order = mongoose.model("Order", OrderSchema);

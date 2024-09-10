@@ -1,4 +1,7 @@
 const Announcement = require("../models/Announcement");
+const Vendor = require("../models/Vendor");
+const { sendEmail } = require("../services/email.service");
+const { announcementEmail } = require("../utils/emailTemplates");
 
 // create new announcement
 exports.createAnnouncement = async (req, res) => {
@@ -11,6 +14,18 @@ exports.createAnnouncement = async (req, res) => {
       endDate
     });
     announcement = await announcement.save();
+    const vendors = await Vendor.find({ "sellerAccountInformation.email": { $ne: null } });
+    for (const vendor of vendors) {
+      const fullName = `${
+        vendor.sellerAccountInformation.firstName ||
+        vendor.businessInformation.businessOwnerName
+      } ${vendor.sellerAccountInformation.lastName || ""}`.trim();
+      await sendEmail({
+        to: vendor.sellerAccountInformation.email,
+        subject: "New Announcement",
+        html: announcementEmail(fullName, subject, content),
+      });
+    }
     res.status(200).json({ success: true, announcement });
   } catch (error) {
     console.error(error.message);

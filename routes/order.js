@@ -8,6 +8,8 @@ router.post("/", orderController.createOrder);
 // Update the order status
 router.put("/:id/status", orderController.updateOrderStatus);
 
+router.put('/update-multiple', orderController.updateMultipleOrderStatuses);
+
 // Update the isPaid status
 router.put("/:id/isPaid", orderController.updateIsPaidStatus);
 
@@ -56,6 +58,7 @@ router.get("/aggregate/vendors", orderController.getAggregatedDataForAllVendors 
 // Admin dashboard overview route
 router.get("/admin/overview/:startDate/:endDate", orderController.getAdminOverview);
 router.get("/admin/overview/", orderController.getAllAdminOverview);
+router.get("/admin/topProducts/", orderController.getTopProducts);
 
 // Weekly sales overview route
 router.get("/admin/weekly-sales/:startDate/:endDate", orderController.getWeeklySalesOverview);

@@ -20,6 +20,7 @@ class PaymentService{
                     order: form.order_id,
                     amount: form.amount
                     }
+                //form.callback_url= 'http://localhost:5000/api/pay/create';
 
                 initializePayment(form, (error, body) => {
                 if(error){
@@ -133,7 +134,6 @@ class PaymentService{
     
                 try {
                     const response = JSON.parse(body);
-                    // console.log(response)
                     const { reference, amount, status } = response.data;
                     const { email } = response.data.customer;
                     const full_name = response.data.metadata.full_name;

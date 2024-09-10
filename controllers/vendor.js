@@ -5,6 +5,8 @@ const saltRounds = 10;
 const jwt = require("jsonwebtoken");
 const crypto = require('crypto');
 const emailService = require("../services/email.service");
+const { sendEmail } = require('../services/email.service');
+const { vendorWelcomeEmail, vendorApproved, vendorRejected } = require("../utils/emailTemplates");
 
 // Create Vendor
 // exports.createVendor = async (req, res) => {
@@ -111,6 +113,14 @@ exports.createVendor = async (req, res) => {
      const responseData = data.toObject();
      delete responseData.sellerAccountInformation.password;
 
+     const fullName  = `${data.sellerAccountInformation.firstName} ${data.sellerAccountInformation.lastName}`;
+
+     await sendEmail({
+      to: data.sellerAccountInformation.email,
+      subject: "Welcome to PorkerHut! Your Vendor Account is Now Active",
+      html: vendorWelcomeEmail(fullName)
+     })
+
     res.send(responseData);
   } catch (err) {
     res.status(500).send({
@@ -133,6 +143,7 @@ exports.loginVendor = async (req, res) => {
       message: "Password is required",
     });
   }
+  console.log(await Vendor.findOne({ "sellerAccountInformation.email": req.body.email }));
 
   try {
     // Check if a vendor exists with the provided email or phone number
@@ -309,8 +320,8 @@ exports.loginVendor = async (req, res) => {
 exports.updateVendor = async (req, res) => {
   // Validate the request
   if (
-    !req.body.sellerAccountInformation ||
-    !req.body.businessInformation ||
+    !req.body.sellerAccountInformation &&
+    !req.body.businessInformation &&
     !req.body.vendorBankAccount
   ) {
     return res.status(400).send({
@@ -318,21 +329,22 @@ exports.updateVendor = async (req, res) => {
         "Seller account information, business information, and vendor bank account are required",
     });
   }
-  console.log(req.body);
 
   // Get the uploaded file information
-  const IDFile = req.body.vendorFiles.IDFile || "";
-  const CACCertificateFile = req.body.vendorFiles.CACCertificateFile || "";
-  const TINCertificateFile = req.body.vendorFiles.TINCertificateFile || "";
-  const profilePhoto = req.body.vendorFiles.profilePhoto || "";
+  const IDFile = req.body.vendorFiles?.IDFile || "";
+  const CACCertificateFile = req.body.vendorFiles?.CACCertificateFile || "";
+  const TINCertificateFile = req.body.vendorFiles?.TINCertificateFile || "";
+  const profilePhoto = req.body.vendorFiles?.profilePhoto || "";
 
-  // Update the businessInformation with the file information
-  req.body.businessInformation.IDFile = IDFile;
-  req.body.businessInformation.CACCertificateFile = CACCertificateFile;
-  req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+  // Update the businessInformation with the file information if it exists
+  if (req.body.businessInformation) {
+    req.body.businessInformation.IDFile = IDFile;
+    req.body.businessInformation.CACCertificateFile = CACCertificateFile;
+    req.body.businessInformation.TINCertificateFile = TINCertificateFile;
+  }
 
-  // Encrypt password using bcrypt
-  if (req.body.sellerAccountInformation.password) {
+  // Encrypt password using bcrypt if sellerAccountInformation exists
+  if (req.body.sellerAccountInformation?.password) {
     const password = req.body.sellerAccountInformation.password;
     const salt = await bcrypt.genSalt(saltRounds);
     const encryptedPassword = await bcrypt.hash(password, salt);
@@ -340,14 +352,23 @@ exports.updateVendor = async (req, res) => {
   }
 
   // Prepare the update object
-  const updateObject = {
-    sellerAccountInformation: req.body.sellerAccountInformation,
-    businessInformation: req.body.businessInformation,
-    vendorBankAccount: req.body.vendorBankAccount,
-    storeStatus: req.body.storeStatus || "pending",
-    profilePhoto: profilePhoto,
-    'sellerAccountInformation.shopName': req.body.storeName
-  };
+  const updateObject = {};
+
+  if (req.body.sellerAccountInformation) {
+    updateObject.sellerAccountInformation = req.body.sellerAccountInformation;
+    updateObject['sellerAccountInformation.shopName'] = req.body.storeName;
+  }
+  
+  if (req.body.businessInformation) {
+    updateObject.businessInformation = req.body.businessInformation;
+  }
+
+  if (req.body.vendorBankAccount) {
+    updateObject.vendorBankAccount = req.body.vendorBankAccount;
+  }
+
+  updateObject.storeStatus = req.body.storeStatus || "pending";
+  updateObject.profilePhoto = profilePhoto;
 
   // Include pickupAddresses in the update if provided
   if (req.body.pickupAddresses) {
@@ -369,7 +390,7 @@ exports.updateVendor = async (req, res) => {
 
     // Exclude the password from the returned payload
     const responseData = vendor.toObject();
-    delete responseData.sellerAccountInformation.password;
+    delete responseData.sellerAccountInformation?.password;
 
     res.send(responseData);
   } catch (err) {
@@ -383,6 +404,7 @@ exports.updateVendor = async (req, res) => {
     });
   }
 };
+
 
 // exports.updateVendor = async (req, res) => {
 //   // Validate the request
@@ -468,6 +490,8 @@ exports.updateVendor = async (req, res) => {
 exports.updateVendorDetails = async (req, res) => {
   const vendorId = req.params.vendorId;
 
+  console.log('2', req.body);
+
   try {
     // Retrieve the current vendor data
     const currentVendor = await Vendor.findById(vendorId);
@@ -515,57 +539,56 @@ exports.updateVendorDetails = async (req, res) => {
   }
 };
 
-exports.updateVendor = async (req, res) => {
-  const vendorId = req.params.vendorId;
+// exports.updateVendor = async (req, res) => {
+//   const vendorId = req.params.vendorId;
+//   try {
+//     // Retrieve the current vendor data
+//     const currentVendor = await Vendor.findById(vendorId);
+//     if (!currentVendor) {
+//       return res.status(404).send({ message: "Vendor not found with id " + vendorId });
+//     }
 
-  try {
-    // Retrieve the current vendor data
-    const currentVendor = await Vendor.findById(vendorId);
-    if (!currentVendor) {
-      return res.status(404).send({ message: "Vendor not found with id " + vendorId });
-    }
+//     // If new files are provided, update the paths; otherwise, keep the existing ones
+//     const IDFile = req.files && req.files.IDFile ? req.files.IDFile.path : currentVendor.businessInformation.IDFile;
+//     const CACCertificateFile = req.files && req.files.CACCertificateFile ? req.files.CACCertificateFile.path : currentVendor.businessInformation.CACCertificateFile;
+//     const TINCertificateFile = req.files && req.files.TINCertificateFile ? req.files.TINCertificateFile.path : currentVendor.businessInformation.TINCertificateFile;
+//     const profilePhoto = req.files && req.files.profilePhoto ? req.files.profilePhoto.path : currentVendor.profilePhoto;
 
-    // If new files are provided, update the paths; otherwise, keep the existing ones
-    const IDFile = req.files && req.files.IDFile ? req.files.IDFile.path : currentVendor.businessInformation.IDFile;
-    const CACCertificateFile = req.files && req.files.CACCertificateFile ? req.files.CACCertificateFile.path : currentVendor.businessInformation.CACCertificateFile;
-    const TINCertificateFile = req.files && req.files.TINCertificateFile ? req.files.TINCertificateFile.path : currentVendor.businessInformation.TINCertificateFile;
-    const profilePhoto = req.files && req.files.profilePhoto ? req.files.profilePhoto.path : currentVendor.profilePhoto;
+//     // Prepare the fields to be updated
+//     const updateFields = {
+//       'sellerAccountInformation.shopName': req.body.storeName,
+//       'sellerAccountInformation.phoneNumber': req.body.phoneNumber,
+//       'businessInformation.address1': req.body.streetAddress,
+//       'businessInformation.city': req.body.location,
+//       'businessInformation.IDFile': IDFile,
+//       'businessInformation.CACCertificateFile': CACCertificateFile,
+//       'businessInformation.TINCertificateFile': TINCertificateFile,
+//       'profilePhoto': profilePhoto
+//     };
 
-    // Prepare the fields to be updated
-    const updateFields = {
-      'sellerAccountInformation.shopName': req.body.storeName,
-      'sellerAccountInformation.phoneNumber': req.body.phoneNumber,
-      'businessInformation.address1': req.body.streetAddress,
-      'businessInformation.city': req.body.location,
-      'businessInformation.IDFile': IDFile,
-      'businessInformation.CACCertificateFile': CACCertificateFile,
-      'businessInformation.TINCertificateFile': TINCertificateFile,
-      'profilePhoto': profilePhoto
-    };
+//     // Encrypt password using bcrypt if provided
+//     if (req.body.sellerAccountInformation && req.body.sellerAccountInformation.password) {
+//       const password = req.body.sellerAccountInformation.password;
+//       const salt = await bcrypt.genSalt(saltRounds);
+//       const encryptedPassword = await bcrypt.hash(password, salt);
+//       updateFields['sellerAccountInformation.password'] = encryptedPassword;
+//     }
 
-    // Encrypt password using bcrypt if provided
-    if (req.body.sellerAccountInformation && req.body.sellerAccountInformation.password) {
-      const password = req.body.sellerAccountInformation.password;
-      const salt = await bcrypt.genSalt(saltRounds);
-      const encryptedPassword = await bcrypt.hash(password, salt);
-      updateFields['sellerAccountInformation.password'] = encryptedPassword;
-    }
+//     // Update the vendor with the new details
+//     const updatedVendor = await Vendor.findByIdAndUpdate(vendorId, { $set: updateFields }, { new: true });
 
-    // Update the vendor with the new details
-    const updatedVendor = await Vendor.findByIdAndUpdate(vendorId, { $set: updateFields }, { new: true });
+//     // Exclude the password from the returned payload
+//     const responseData = updatedVendor.toObject();
+//     delete responseData.sellerAccountInformation.password;
 
-    // Exclude the password from the returned payload
-    const responseData = updatedVendor.toObject();
-    delete responseData.sellerAccountInformation.password;
-
-    res.send(responseData);
-  } catch (err) {
-    console.error("Error updating vendor:", err);
-    res.status(500).send({
-      message: "Error updating vendor with id " + vendorId,
-    });
-  }
-};
+//     res.send(responseData);
+//   } catch (err) {
+//     console.error("Error updating vendor:", err);
+//     res.status(500).send({
+//       message: "Error updating vendor with id " + vendorId,
+//     });
+//   }
+// };
 
 
 
@@ -720,6 +743,22 @@ exports.updateVendorStatus = async (req, res) => {
         message: "Vendor not found with id " + req.params.vendorId,
       });
     }
+    if(req.body.storeStatus === 'approved') {
+      const fullName = `${vendor.sellerAccountInformation.firstName} ${vendor.sellerAccountInformation.lastName}`;
+      await sendEmail({
+        to: vendor.sellerAccountInformation.email,
+        subject: "Welcome to PorkerHut! Your Vendor Account is Now Active",
+        html: vendorApproved(fullName)
+      })
+    }
+    else if(req.body.storeStatus === 'rejected') {
+      const fullName = `${vendor.sellerAccountInformation.firstName} ${vendor.sellerAccountInformation.lastName}`;
+      await sendEmail({
+        to: vendor.sellerAccountInformation.email,
+        subject: "Your Vendor Account has been Rejected",
+        html: vendorRejected(fullName)
+      })
+    }
     res.send(vendor);
   } catch (err) {
     if (err.kind === "ObjectId") {
@@ -779,10 +818,10 @@ exports.resetPassword = async (req, res) => {
     return res.status(400).json({ error: "Token is invalid or has expired." });
   }
 
-  user.password = await bcrypt.hash(req.body.password, 10);
-  user.resetToken = undefined;
-  user.resetTokenExpiration = undefined;
-  await user.save();
+  vendor.password = await bcrypt.hash(req.body.password, 10);
+  vendor.resetToken = undefined;
+  vendor.resetTokenExpiration = undefined;
+  await vendor.save();
 
   res.status(200).json({ message: "Password has been reset." });
 };
