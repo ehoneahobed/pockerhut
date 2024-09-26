@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
+const { Product } = require("../models/Product");
 const Invitation = require("../models/AdminInvitation");
 const jwt = require('jsonwebtoken');
 const crypto = require("crypto");
@@ -10,76 +11,74 @@ const { default: axios } = require("axios");
 exports.registerUser = async (req, res) => {
   try {
     const { firstName, lastName, email, password, phoneNumber, role, isAccessRevoked, invitationToken } = req.body;
-
-       // Restrict registration for admin or superadmin roles to those with a valid invitation token
-       if (role === 'admin' || role === 'superadmin') {
-        if (!invitationToken) {
-          return res.status(400).json({ message: "Missing invitation token for admin or superadmin registration." });
-        }
-  
-        const invitation = await Invitation.findOne({
-          token: invitationToken,
-          email: email, // Optionally ensure the token is for the correct email
-          role: role,
-          used: false,
-          expiresAt: { $gt: Date.now() }
-        });
-  
-        if (!invitation) {
-          return res.status(400).json({ message: "Invalid or expired invitation token." });
-        }
-  
-        // Mark the invitation as used to prevent reuse
-        invitation.used = true;
-        await invitation.save();
+    if (role === 'admin' || role === 'superadmin') {
+      if (!invitationToken) {
+        return res.status(400).json({ message: "Missing invitation token for admin or superadmin registration." });
       }
 
-    // check if user with this email already exists
+      const invitation = await Invitation.findOne({
+        token: invitationToken,
+        email: email,
+        role: role,
+        used: false,
+        expiresAt: { $gt: Date.now() }
+      });
+
+      if (!invitation) {
+        return res.status(400).json({ message: "Invalid or expired invitation token." });
+      }
+      invitation.used = true;
+      await invitation.save();
+    }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
-
-    // hashing password with bcrypt
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
     const newUser = new User({
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
+      firstName,
+      lastName,
+      email,
       password: hashedPassword,
-      phoneNumber: phoneNumber,
-      role: role,
-      isAccessRevoked: isAccessRevoked,
+      phoneNumber,
+      role,
+      isAccessRevoked
     });
     const savedUser = await newUser.save();
+    
     const thankYouTemplate = generateWelcomeEmail(savedUser.firstName, savedUser.lastName, savedUser.email);
     await sendEmail({
       to: savedUser.email,
       subject: "Welcome to the platform",
       html: thankYouTemplate
-    })
-    // send back everything except that the password
-    // const data = { ...savedUser.toObject(), password: undefined };
-
+    });
     let topProducts = [];
     try {
       const response = await axios.get(`${process.env.BASE_API_URL}/api/orders/admin/topProducts`);
       topProducts = response.data.slice(0, 3);
     } catch (error) {
-      console.error("Error fetching top products:", error);
       topProducts = [];
     }
+    if (topProducts.length < 3) {
+      console.log("Not enough top products found, fetching from local database.");
+    
+      const localProducts = await Product.find().limit(3);
+      const totalProducts = [...topProducts, ...localProducts].slice(0, 3);
+      topProducts = totalProducts;
+    }
+
+    console.log("Top products", topProducts);
     
     const productDetails = topProducts.map(product => ({
-      productName: product.productInfo.information.productName,
-      productId: product.productID,
-      totalItemsSold: product.totalItemsSold,
-      totalSales: product.totalSales,
-      productPrice: product.productInfo.pricing.productPrice,
-      image: product.productInfo?.images[0],
-    }));
+      productName: product.information?.productName,
+      productId: product._id,
+      totalItemsSold: product.pricing?.quantity || 0,
+      totalSales: product.totalSales || 0,
+      productPrice: product.pricing?.productPrice || 0,
+      image: product.images?.[0],
+    }));    
     const thankYou = generateNewWelcomeEmail(savedUser.firstName, productDetails);
     await sendEmail({
       to: savedUser.email,
@@ -87,7 +86,7 @@ exports.registerUser = async (req, res) => {
       html: thankYou
     });    
 
-    const { password: myPassword, ...others} = savedUser._doc;
+    const { password: myPassword, ...others } = savedUser._doc;
     res.status(201).json({ message: "User created successfully", others });
   } catch (error) {
     console.log(error);
